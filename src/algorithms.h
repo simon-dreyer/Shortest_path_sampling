@@ -3,16 +3,22 @@
 // Struct to represent an edge
 
 typedef unsigned long int uli;
+typedef double wei;
 
 typedef struct {
   uli src;
   uli dest;
+  wei weight;
+  uli nb;
 } Edge;
 
 typedef struct {
   Edge *edges;
   uli edge_count;
+  int is_weighted;
+  int is_nb_dag;
 } Graph;
+
 
 typedef struct Node {
   uli key;
@@ -27,6 +33,7 @@ typedef struct {
 typedef struct BFS_ret {
   Graph g;
   uli* dist;
+  uli* paths;
 } BFS_ret;
 
 

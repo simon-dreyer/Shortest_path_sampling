@@ -8,7 +8,12 @@ void print_graph(Graph graph){
   // Print the edges
   printf("Edges of the graph:\n");
   for (uli i = 0; i < graph.edge_count; i++) {
-    printf("%lu -> %lu\n", graph.edges[i].src, graph.edges[i].dest);
+    if(graph.is_nb_dag){
+      printf("%lu -> %lu : %lu\n", graph.edges[i].src, graph.edges[i].dest, graph.edges[i].nb);
+    }
+    else{
+      printf("%lu -> %lu\n", graph.edges[i].src, graph.edges[i].dest);
+    }
   }
   uli nb_nodes = count_nodes(graph);
   printf("Number of nodes : %lu number of edges : %lu\n", nb_nodes, graph.edge_count);
@@ -20,7 +25,6 @@ void write_graph(const char *filename, Graph graph) {
     perror("Error opening file for writing");
     return;
   }
-
   for (uli i = 0; i < graph.edge_count; i++) {
     fprintf(file, "%lu %lu\n", graph.edges[i].src, graph.edges[i].dest);
   }
@@ -174,9 +178,12 @@ void create_adjacency_list(Graph graph, uli* adj_list, uli*  node_count, uli nb_
 BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
   uli visited[nb_nodes];
   uli* distances;
+  uli* nb_paths;
   distances = malloc(nb_nodes* sizeof(uli));
+  nb_paths = malloc(nb_nodes* sizeof(uli));
   for(uli i = 0;i < nb_nodes;i++){
     distances[i] = ULONG_MAX;
+    nb_paths[i] = 0;
   }
   memset(visited, 0, sizeof visited);
   uli queue[nb_nodes];
@@ -189,6 +196,8 @@ BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
   int edge_capacity = 10; // Initial capacity for edges array
   int edge_count = 0;
   Graph graph = {NULL, 0};
+  graph.is_nb_dag = 1;
+  graph.is_weighted = 0;
   // Allocate initial memory for edges
   edges = (Edge *)malloc(edge_capacity * sizeof(Edge));
   if (edges == NULL) {
@@ -198,6 +207,7 @@ BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
 
   visited[start_node] = 1;
   distances[start_node] = 0;
+  nb_paths[start_node] = 1;
   queue[rear++] = start_node;
 
   printf("BFS starting from node %d:\n", start_node);
@@ -216,7 +226,9 @@ BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
         // add edges to the dag
         edges[edge_count].src = current_node;
         edges[edge_count].dest = neighbor;
+        edges[edge_count].nb = nb_paths[current_node];
         edge_count++;
+        nb_paths[neighbor] = nb_paths[neighbor] + nb_paths[current_node];
         // If the current capacity is reached, double the array size
         if (edge_count >= edge_capacity) {
           edge_capacity *= 2;
@@ -234,5 +246,26 @@ BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
   graph.edge_count = edge_count;
   res.g = graph;
   res.dist = distances;
+  res.paths = nb_paths;
   return res;
+}
+
+//send dag values to this function
+void dag_to_partial_sum(Graph *g, uli nb_nodes)
+{
+  uli visited[nb_nodes];
+  uli last[nb_nodes];
+  memset(visited, 0, sizeof visited);
+  memset(last, 0, sizeof last);
+
+  for(uli i = 0; i < g->edge_count; i++){
+    if(visited[g->edges[i].dest]){
+      g->edges[i].nb = g->edges[i].nb + last[g->edges[i].dest];
+      last[g->edges[i].dest] = g->edges[i].nb;
+    }
+    else{
+      last[g->edges[i].dest] = g->edges[i].nb;
+      visited[g->edges[i].dest] = 1;
+    }
+  }
 }
