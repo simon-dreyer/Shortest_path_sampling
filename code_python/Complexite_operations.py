@@ -52,6 +52,37 @@ def c_Dijkstra_DAG(G,source):
     return pred,dist,compteur
 
 
+def c_BFS_DAG(G,source):
+    """Renvoie un tuple (predecesseur,distance) avec predecesseur le DAG associé au BFS à partir de la source sous la forme d'un dictionnaire noeud: liste de predecesseurs et distance le dictionnaire des distances au point source"""
+    pred = {}
+    dist = {}
+    n,m = len(G.nodes()), len(G.edges())
+
+    seen = [False for i in range(n)]
+    fifo = deque([])
+
+    seen[source] = True
+    pred[source] = []
+    fifo.append(source)
+
+    compteur = 1
+
+    while (len(fifo) > 0):
+        current_node = fifo.popleft()
+        dist[current_node] = 0 if current_node==source else dist[pred[current_node][0]] + 1
+        compteur += 1
+
+        for neighbor in G.neighbors(current_node):
+            compteur +=1
+            if not seen[neighbor]:
+                seen[neighbor] = True
+                fifo.append(neighbor)
+                pred[neighbor] = [current_node]
+            elif neighbor != source and dist[pred[neighbor][0]] == dist[current_node]:
+                pred[neighbor].append(current_node)
+
+    return pred,dist,compteur
+
 
 def c_Table_PCC(pred,dist,source):
     """Prend en argument le couple (DAG des predecesseurs,dictionnaire des distance) dans Dijsktra qui part de source. Renvoie un tableau avec en position i le nombre de plus court chemins qui partent de la source et arrivent en i"""
@@ -936,7 +967,7 @@ def c_Preprocessing_Graph_v3(G):
 
     # Un Dijkstra par noeud + remplissage de la table des pcc
     for source in range(n):
-        pred,dist,c = c_Dijkstra_DAG(G,source)
+        pred,dist,c = c_BFS_DAG(G,source)
         compteur += c
 
         dags.append(pred)
