@@ -9,6 +9,7 @@ from math import *
 from numpy import linalg as LA
 import os
 import osmnx as ox
+from collections import deque
 
 
 
@@ -51,6 +52,35 @@ def Dijkstra_DAG(G,source):
     """Renvoie un tuple (predecesseur,distance) avec predecesseur le DAG associé au Dijkstra à partir de la source sous la forme d'un dictionnaire noeud: liste de predecesseurs et distance le dictionnaire des distances au point source"""
     pred,dist = nx.dijkstra_predecessor_and_distance(G,source)
     return pred,dist
+
+
+def BFS_DAG(G,source):
+    """Renvoie un tuple (predecesseur,distance) avec predecesseur le DAG associé au BFS à partir de la source sous la forme d'un dictionnaire noeud: liste de predecesseurs et distance le dictionnaire des distances au point source"""
+    pred = {}
+    dist = {}
+    n,m = len(G.nodes()), len(G.edges())
+
+    seen = [False for i in range(n)]
+    fifo = deque([])
+
+    seen[source] = True
+    pred[source] = []
+    fifo.append(source)
+
+    while (len(fifo) > 0):
+        current_node = fifo.popleft()
+        dist[current_node] = 0 if current_node==source else dist[pred[current_node][0]] + 1
+
+        for neighbor in G.neighbors(current_node):
+            if not seen[neighbor]:
+                seen[neighbor] = True
+                fifo.append(neighbor)
+                pred[neighbor] = [current_node]
+            elif neighbor != source and dist[pred[neighbor][0]] == dist[current_node]:
+                pred[neighbor].append(current_node)
+
+    return pred,dist
+
 
 
 
@@ -97,7 +127,7 @@ def Ajoute_somme_partielle_dag_IN_PLACE(pred,table):
 
 ## Algo v3
 
-def Preprocessing_Graph_v3(G):
+def Preprocessing_Graph_v3(G, dijkstra = False):
     """ Renvoie un tuple (dags,table_departs_arrivees,table_departs,nb_chemins) avec
         - dags[i] = liste des dictionnaires de predecesseurs lors d'un Dijkstra partant de i avec la somme partielle en 2eme coordonnée
         dags[depart][i][1] = dags[depart][i-1][1] + nb de PCC (depart)-->(dags[depart][i])
@@ -113,7 +143,7 @@ def Preprocessing_Graph_v3(G):
 
     # Un Dijkstra par noeud + remplissage de la table des pcc
     for source in range(n):
-        pred,dist = Dijkstra_DAG(G,source)
+        pred,dist = Dijkstra_DAG(G,source) if dijkstra else BFS_DAG(G, source)
         dags.append(pred)
         Table_PCC_In_Place(pred,dist,source,tables[source])
         Ajoute_somme_partielle_dag_IN_PLACE(pred,tables[source])                # On ajoute à chaque prédecesseurs, la somme partielle du nombre de pcc entre (source) et lui.

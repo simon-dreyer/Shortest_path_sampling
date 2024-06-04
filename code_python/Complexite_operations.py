@@ -9,6 +9,7 @@ from math import *
 from numpy import linalg as LA
 import os
 import osmnx as ox
+from collections import deque
 
 
 
