@@ -1,0 +1,29 @@
+Résumé des fichiers de code:
+
+
+
+Algo_naif : Algo qui liste tous les PCC et en tire un au hasard
+
+
+Algo_v1 : Notre algo sans aucune dichotomie ni pour déterminer les bornes ni pour reconstruire le chemin
+
+
+Algo_v2 : Notre algo avec dichotomie pour déterminer les bornes mais pas pour reconstruire le chemin. Dans les DAGs on ordonne les prédécesseurs par nb de PCC décroissant.
+
+
+Algo_v3 : Notre algo avec dichotomie pour déterminer les bornes et pour reconstruire le chemin (arêtes étiquetées dans les DAGs)
+
+
+Algo_v3_dynamique : Algo avec les dichotomies mais en ne faisant un preprocessing que quand on a une requête avec une nouvelle source.
+
+
+Algo_long : Algo_v2 qui supporte des requêtes sur la longueur des PCC générés.
+
+
+Algo_long_v2 : Algo_v3 qui supporte des requêtes sur la longueur des PCC générés.
+
+
+Algo_poids_v1 : Notre algo avec les dichotomies pour les graphes pondérés. On génère uniformément des epsilon-prefixe PCC.
+
+
+Algo_poids_long_v1 : Algo_poids_v1 qui supporte des requêtes sur la longueur des epsilon-PCC générés.
