@@ -4,36 +4,40 @@
 #include <limits.h>
 #include "algorithms.h"
 
-void print_graph(Graph graph){
+/////////////////////////////////////////// Read, write, print graps ///////////////////////////////
+
+void print_graph(Graph* graph, int full_info){
   // Print the edges
-  printf("Edges of the graph:\n");
-  for (uli i = 0; i < graph.edge_count; i++) {
-    if(graph.is_nb_dag){
-      printf("%lu -> %lu : %lu\n", graph.edges[i].src, graph.edges[i].dest, graph.edges[i].nb);
-    }
-    else{
-      printf("%lu -> %lu\n", graph.edges[i].src, graph.edges[i].dest);
-    }
+  if (full_info){
+    printf("Edges of the graph:\n");
+    for (uli i = 0; i < graph->edge_count; i++) {
+      if(graph->is_nb_dag){
+        printf("%lu -> %lu : %lu\n", graph->edges[i].src, graph->edges[i].dest, graph->edges[i].nb);
+      }
+      else{
+        printf("%lu -> %lu\n", graph->edges[i].src, graph->edges[i].dest);
+      }
+    } 
   }
   uli nb_nodes = count_nodes(graph);
-  printf("Number of nodes : %lu number of edges : %lu\n", nb_nodes, graph.edge_count);
+  printf("Number of nodes : %lu number of edges : %lu\n", nb_nodes, graph->edge_count);
 }
 
-void write_graph(const char *filename, Graph graph) {
+void write_graph(const char *filename, Graph* graph) {
   FILE *file = fopen(filename, "w");
   if (file == NULL) {
     perror("Error opening file for writing");
     return;
   }
-  for (uli i = 0; i < graph.edge_count; i++) {
-    fprintf(file, "%lu %lu\n", graph.edges[i].src, graph.edges[i].dest);
+  for (uli i = 0; i < graph->edge_count; i++) {
+    fprintf(file, "%lu %lu %lu\n", graph->edges[i].src, graph->edges[i].dest, graph->edges[i].nb);
   }
 
   fclose(file);
 }
 
 // Function to read graph from file
-Graph read_graph(const char *filename) {
+Graph read_graph(const char *filename, int is_weighted) {
     FILE *file;
     Edge *edges = NULL;
     int edge_capacity = 10; // Initial capacity for edges array
@@ -59,9 +63,15 @@ Graph read_graph(const char *filename) {
 
     // I ignore addiotnal values after the source and destination. Its made on purpose
     // So that if we want to account for weighted graphs it is possible
+    int nb_correct = (is_weighted == 1) ? 3 : 2;
     char line[256];
+    int nb_read;
     while (fgets(line, sizeof(line), file)) {
-      if (sscanf(line, "%lu %lu", &edges[edge_count].src, &edges[edge_count].dest) == 2) {
+      if(! is_weighted)
+        nb_read = sscanf(line, "%lu %lu", &edges[edge_count].src, &edges[edge_count].dest);
+      else
+        nb_read = sscanf(line, "%lu %lu %lu", &edges[edge_count].src, &edges[edge_count].dest, &edges[edge_count].nb);
+      if (nb_read == nb_correct) {
         edge_count++;
 
         // If the current capacity is reached, double the array size
@@ -87,6 +97,8 @@ Graph read_graph(const char *filename) {
 }
 
 
+//////////////////////////////////////////////   Other Functions Hash Set and List /////////////////////////////////
+
 
 // Function to create a new hash set
 HashSet* create_hash_set(int size) {
@@ -109,7 +121,7 @@ int contains(HashSet *hash_set, int key) {
     int hash_index = hash(key, hash_set->size);
     Node *entry = hash_set->table[hash_index];
     while (entry != NULL) {
-        if (entry->key == key) {
+        if (entry->data == key) {
             return 1;
         }
         entry = entry->next;
@@ -122,7 +134,7 @@ void add(HashSet *hash_set, int key) {
     if (!contains(hash_set, key)) {
         int hash_index = hash(key, hash_set->size);
         Node *new_node = (Node *)malloc(sizeof(Node));
-        new_node->key = key;
+        new_node->data = key;
         new_node->next = hash_set->table[hash_index];
         hash_set->table[hash_index] = new_node;
     }
@@ -142,13 +154,104 @@ void free_hash_set(HashSet *hash_set) {
     free(hash_set);
 }
 
-uli count_nodes(Graph graph) {
-  HashSet *hash_set = create_hash_set(2 * graph.edge_count);
+
+Node* createNode(uli data) {
+
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    if (newNode == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
+
+    newNode->data = data;
+    newNode->next = NULL;
+    return newNode;
+}
+
+// Function to initialize a new list
+void initList(List* list) {
+    list->head = NULL;
+    list->tail = NULL;
+}
+
+// Function to add a node to the end of the list
+void addNode(List* list, uli data) {
+    Node* newNode = createNode(data);
+    if (list->head == NULL) {
+      list->head = newNode;
+      list->tail = newNode;
+    } else {
+      list->tail->next = newNode;
+      list->tail = newNode;
+    }
+}
+
+// Function to print the list
+void printList(Node* head) {
+    Node* temp = head;
+    while (temp != NULL) {
+        printf("%lu -> ", temp->data);
+        temp = temp->next;
+    }
+    printf("NULL\n");
+}
+
+// Function to free the list
+void freeList(Node* head) {
+    Node* temp;
+    while (head != NULL) {
+        temp = head;
+        head = head->next;
+        free(temp);
+    }
+}
+
+// Function to reverse the list
+void reverseList(List* list) {
+    Node* prev = NULL;
+    Node* curr = list->head;
+    Node* next = NULL;
+    list->tail = list->head;
+
+    while (curr != NULL) {
+        next = curr->next;  // Store the next node
+        curr->next = prev;  // Reverse the current node's pointer
+        prev = curr;        // Move the prev and curr pointers one step forward
+        curr = next;
+    }
+
+    list->head = prev;  // Update the head pointer to the new first node
+}
+
+// Function to write the list to a file
+void writeListToFile(List* head, uli nb, const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (file == NULL) {
+        fprintf(stderr, "Error opening file %s for writing\n", filename);
+        return;
+    }
+    for(uli i = 0; i < nb; i ++){
+      if(head[i].head != NULL){
+        Node* temp = head[i].head;
+        while (temp->next != NULL) {
+          fprintf(file, "%lu,", temp->data);
+          temp = temp->next;
+        }
+        fprintf(file, "%lu\n", temp->data); 
+      }
+    }
+
+    fclose(file);
+}
+/////////////////////////////////////: End HashSet and List ////////////////////////////
+
+uli count_nodes(Graph* graph) {
+  HashSet *hash_set = create_hash_set(2 * graph->edge_count);
   int node_count = 0;
 
-  for (uli i = 0; i < graph.edge_count; i++) {
-    uli src = graph.edges[i].src;
-    uli dest = graph.edges[i].dest;
+  for (uli i = 0; i < graph->edge_count; i++) {
+    uli src = graph->edges[i].src;
+    uli dest = graph->edges[i].dest;
 
     if (!contains(hash_set, src)) {
       add(hash_set, src);
@@ -164,18 +267,57 @@ uli count_nodes(Graph graph) {
   return node_count;
 }
 
-void create_adjacency_list(Graph graph, uli* adj_list, uli*  node_count, uli nb_nodes) {
-  for (uli i = 0; i < graph.edge_count; i++) {
-    int src = graph.edges[i].src;
-    int dest = graph.edges[i].dest;
-    *((adj_list+src*nb_nodes) + node_count[src]) = dest;
-    node_count[src] ++;
-    //adj_list[src][node_count[src]++] = dest;
-    //adj_list[dest][node_count[dest]++] = src; // If the graph is undirected
+void create_adjacency_list(Graph* graph, Couple_adj** adj_list, uli*  node_count, uli nb_nodes, char* directed, int is_reversed) {
+  //Couple_adj* res = (Couple_adj*) malloc(graph->edge_count * sizeof(Couple_adj));
+  if(!is_reversed){
+    for (uli i = 0; i < graph->edge_count; i++) {
+      uli src = graph->edges[i].src;
+      uli dest = graph->edges[i].dest;
+      //res[i].v = dest;
+      //res[i].nb = graph->edges[i].nb;
+      adj_list[src][node_count[src]].v = dest;
+      adj_list[src][node_count[src]].nb = graph->edges[i].nb;
+      //(*((adj_list+src*nb_nodes) + node_count[src])).v = dest;
+      //(*((adj_list+src*nb_nodes) + node_count[src])).nb = graph->edges[i].nb;
+      node_count[src] ++;
+      if (strcmp(directed,"u") == 0)
+        {
+          //res[i].v = src;
+          //res[i].nb = graph->edges[i].nb;
+          adj_list[dest][node_count[dest]].v = src;
+          adj_list[dest][node_count[dest]].nb = graph->edges[i].nb;
+          /* (*((adj_list+dest*nb_nodes) + node_count[dest])).v = src; */
+          /* (*((adj_list+dest*nb_nodes) + node_count[dest])).nb = graph->edges[i].nb; */
+          node_count[dest] ++;
+        }
+    } 
+  }
+  else{
+    for (uli i = 0; i < graph->edge_count; i++) {
+      uli dest = graph->edges[i].src;
+      uli src = graph->edges[i].dest;
+      //res[i].v = dest;
+      //res[i].nb = graph->edges[i].nb;
+      adj_list[src][node_count[src]].v = dest;
+      adj_list[src][node_count[src]].nb = graph->edges[i].nb;
+      /* (*((adj_list+src*nb_nodes) + node_count[src])).v = dest; */
+      /* (*((adj_list+src*nb_nodes) + node_count[src])).nb = graph->edges[i].nb; */
+      node_count[src] ++;
+      if (strcmp(directed,"u") == 0)
+        {
+          //res[i].v = src;
+          //res[i].nb = graph->edges[i].nb;
+          adj_list[dest][node_count[dest]].v = src;
+          adj_list[dest][node_count[dest]].nb = graph->edges[i].nb;
+          /* (*((adj_list+dest*nb_nodes) + node_count[dest])).v = src; */
+          /* (*((adj_list+dest*nb_nodes) + node_count[dest])).nb = graph->edges[i].nb; */
+          node_count[dest] ++;
+        }
+    }
   }
 }
 
-BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
+BFS_ret bfs(int start_node, Couple_adj** adj_list, uli*  node_count, uli nb_nodes) {
   uli visited[nb_nodes];
   uli* distances;
   uli* nb_paths;
@@ -202,7 +344,7 @@ BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
   edges = (Edge *)malloc(edge_capacity * sizeof(Edge));
   if (edges == NULL) {
     perror("Error allocating memory");
-    return res;
+    exit(-1);
   }
 
   visited[start_node] = 1;
@@ -210,13 +352,15 @@ BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
   nb_paths[start_node] = 1;
   queue[rear++] = start_node;
 
-  printf("BFS starting from node %d:\n", start_node);
+  //printf("BFS starting from node %d:\n", start_node);
   while (front < rear) {
     uli current_node = queue[front++];
-    printf("%lu ", current_node);
-
+    //printf("%lu ", current_node);
+    Couple_adj z;
     for (uli i = 0; i < node_count[current_node]; i++) {
-      uli neighbor = *((adj_list + current_node*nb_nodes) + i);
+      z = adj_list[current_node][i];
+      //*((adj_list + current_node*nb_nodes) + i);
+      uli neighbor = z.v;
       if (!visited[neighbor]) {
         visited[neighbor] = 1;
         queue[rear++] = neighbor;
@@ -235,13 +379,12 @@ BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes) {
           edges = (Edge *)realloc(edges, edge_capacity * sizeof(Edge));
           if (edges == NULL) {
             perror("Error reallocating memory");
-            return res;
+            exit(-1);
           }
         } 
       }
     }
   }
-  printf("\n");
   graph.edges = edges;
   graph.edge_count = edge_count;
   res.g = graph;
@@ -268,4 +411,18 @@ void dag_to_partial_sum(Graph *g, uli nb_nodes)
       visited[g->edges[i].dest] = 1;
     }
   }
+}
+
+
+////////////////////////////////////////// Sorting part ///////////////////////////////////////
+
+int compareEdges(const void *a, const void *b) {
+  Edge *edgeA = (Edge *)a;
+  Edge *edgeB = (Edge *)b;
+  return (edgeA->nb > edgeB->nb) - (edgeA->nb < edgeB->nb);
+}
+
+void optimal_bunrank_order(Graph* graph){
+
+  qsort(graph->edges, graph->edge_count, sizeof(Edge) ,compareEdges);
 }

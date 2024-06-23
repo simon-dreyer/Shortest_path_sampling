@@ -1,7 +1,5 @@
 // Struct to represent an edge
 
-// Struct to represent an edge
-
 typedef unsigned long int uli;
 typedef double wei;
 
@@ -21,9 +19,15 @@ typedef struct {
 
 
 typedef struct Node {
-  uli key;
-  struct Node *next;
+  uli data;
+  struct Node* next;
 } Node;
+
+// Define the list structure
+typedef struct {
+  Node* head;
+  Node* tail;
+} List;
 
 typedef struct {
   Node **table;
@@ -36,10 +40,28 @@ typedef struct BFS_ret {
   uli* paths;
 } BFS_ret;
 
+typedef struct Couple_pred {
+  uli v;
+  uli r;
+} Couple_pred;
 
-Graph read_graph(const char *filename);
-uli count_nodes(Graph graph);
-void create_adjacency_list(Graph graph, uli* adj_list, uli*  node_count, uli nb_nodes);
-BFS_ret bfs(int start_node, uli* adj_list, uli*  node_count, uli nb_nodes);
-void print_graph(Graph graph);
-void write_graph(const char *filename, Graph graph);
+typedef struct Couple_adj {
+  uli v;
+  uli nb;
+} Couple_adj;
+
+
+Graph read_graph(const char *filename, int is_weighted);
+uli count_nodes(Graph* graph);
+void create_adjacency_list(Graph* graph, Couple_adj** adj_list, uli*  node_count, uli nb_nodes, char* directed, int is_reversed);
+BFS_ret bfs(int start_node, Couple_adj** adj_list, uli*  node_count, uli nb_nodes);
+void print_graph(Graph* graph, int full_info);
+void write_graph(const char *filename, Graph* graph);
+void dag_to_partial_sum(Graph *g, uli nb_nodes);
+void optimal_bunrank_order(Graph* graph);
+void addNode(List* li, uli data);
+void printList(Node* head);
+void freeList(Node* head);
+void reverseList(List* head);
+void writeListToFile(List* head, uli nb_elements, const char* filename);
+void initList(List* list);

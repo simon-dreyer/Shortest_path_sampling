@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I.
+CFLAGS=-I. -lgsl -lgslcblas -lm -g -Wall
 DEPS = algorithms.h
 OBJ = main.o algorithms.o 
 
