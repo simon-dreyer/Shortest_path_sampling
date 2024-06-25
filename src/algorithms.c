@@ -419,10 +419,10 @@ void dag_to_partial_sum(Graph *g, uli nb_nodes)
 int compareEdges(const void *a, const void *b) {
   Edge *edgeA = (Edge *)a;
   Edge *edgeB = (Edge *)b;
-  return (edgeA->nb > edgeB->nb) - (edgeA->nb < edgeB->nb);
+  return (edgeA->nb < edgeB->nb) - (edgeA->nb > edgeB->nb);
 }
 
 void optimal_bunrank_order(Graph* graph){
-
+  // il est possible de faire mieux en pratique probablement en ordonnant directement les aretes entrantes d'un noeud
   qsort(graph->edges, graph->edge_count, sizeof(Edge) ,compareEdges);
 }

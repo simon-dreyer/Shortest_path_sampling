@@ -115,6 +115,7 @@ Couple_pred find_pred(uli v, Couple_adj** adj_list, uli nb_nodes, uli* nb_paths_
   uli i = 0;
   Couple_adj z = adj_list[v][0]; // *((adj_list+v*nb_nodes));
   uli w = z.v;
+  //printf("--------- val %lu \n", nb_paths_from_s[w]);
   uli rp = r - nb_paths_from_s[w];
   // printf("ici just first pred %lu %lu \n", w, rp);
   while(rp < r){
@@ -123,6 +124,7 @@ Couple_pred find_pred(uli v, Couple_adj** adj_list, uli nb_nodes, uli* nb_paths_
     z = adj_list[v][i];  // *((adj_list+v*nb_nodes) + i);
     w = z.v;
     rp = rp - nb_paths_from_s[w];
+    //printf("--------- val %lu \n", nb_paths_from_s[w]);
   }
   rp = rp + nb_paths_from_s[w];
   Couple_pred y;
@@ -142,14 +144,11 @@ List build_rank_b(Couple_adj** adj_list, uli* node_count, uli nb_nodes, uli* nb_
   while(v != source_node){
     //printf("new iteration while current v %lu\n",v);
     addNode(&path, v);
-    if (strcmp(which,"b-unrank") == 0 || strcmp(which,"ob-unrank") == 0){
-      x = find_pred(v, adj_list, nb_nodes, nb_paths_from_s, r);
-    }
-    else if (strcmp(which,"i-unrank") == 0){
+    if (strcmp(which,"i-unrank") == 0){
       x = find_pred_opti(v, adj_list, node_count, nb_nodes, nb_paths_from_s, r); 
     }
     else{
-      // Should not go here
+      x = find_pred(v, adj_list, nb_nodes, nb_paths_from_s, r);
     }
     r = x.r;
     v = x.v;
@@ -515,10 +514,11 @@ int main(int argc, char *argv[]) {
 
   struct timeval tv; // Seed generation based on time
   gettimeofday(&tv,0);
-  unsigned long mySeed = tv.tv_sec + tv.tv_usec;
+  //unsigned long mySeed = tv.tv_sec + tv.tv_usec;
+  unsigned long mySeed2 = 0;
   T = gsl_rng_default; // Generator setup
   R = gsl_rng_alloc (T);
-  gsl_rng_set(R, mySeed);
+  gsl_rng_set(R, mySeed2);
 
 
   uli source_node = strtoul(argv[4],NULL,10);
