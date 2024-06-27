@@ -1,0 +1,5 @@
+- http://konect.cc/networks/soc-Epinions1/
+- http://konect.cc/networks/lkml-reply/
+- http://konect.cc/networks/livemocha/
+- http://konect.cc/networks/ca-AstroPh/
+- http://konect.cc/networks/slashdot-threads/
