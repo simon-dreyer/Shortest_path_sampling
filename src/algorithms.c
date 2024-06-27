@@ -416,13 +416,37 @@ void dag_to_partial_sum(Graph *g, uli nb_nodes)
 
 ////////////////////////////////////////// Sorting part ///////////////////////////////////////
 
-int compareEdges(const void *a, const void *b) {
-  Edge *edgeA = (Edge *)a;
-  Edge *edgeB = (Edge *)b;
-  return (edgeA->nb < edgeB->nb) - (edgeA->nb > edgeB->nb);
+int compareElem(const void *a, const void *b) {
+  Couple_pred *A = (Couple_pred *)a;
+  Couple_pred *B = (Couple_pred *)b;
+  return (A->r < B->r) - (A->r > B->r);
 }
 
-void optimal_bunrank_order(Graph* graph){
+Edge * optimal_bunrank_order(Graph* graph, Couple_pred* nb_paths_from_s, uli nb_nodes, Couple_adj** adj_list, uli*  node_count){
   // il est possible de faire mieux en pratique probablement en ordonnant directement les aretes entrantes d'un noeud
-  qsort(graph->edges, graph->edge_count, sizeof(Edge) ,compareEdges);
+  qsort(nb_paths_from_s, nb_nodes, sizeof(Couple_pred) ,compareElem);
+  /* for(uli jj=0; jj<nb_nodes;jj++) */
+  /*   printf("v %lu nb %lu edge count %lu node count : %lu\n",nb_paths_from_s[jj].v, nb_paths_from_s[jj].r, graph->edge_count, node_count[jj]); */
+  Edge * new_edges = (Edge *) malloc(graph->edge_count * sizeof(Edge));
+  if (new_edges == NULL)
+    {
+      printf("optimal_bunrank_order: malloc problem allocation\n");
+      exit(-1);
+    }
+  uli ii = 0;
+  for(uli i = 0; i < nb_nodes; i++){
+    for(uli j = 0; j < node_count[nb_paths_from_s[i].v]; j++){
+      new_edges[ii].src = nb_paths_from_s[i].v;
+      new_edges[ii].dest = adj_list[nb_paths_from_s[i].v][j].v;
+      new_edges[ii].nb = nb_paths_from_s[i].r;
+      new_edges[ii].weight = 0.0;
+      ii++;
+    }
+  }
+  /* puts("hello2"); */
+  /* free(graph->edges); */
+  /* puts("hello3"); */
+  /* graph->edges = new_edges; */
+  /* puts("hello4"); */
+  return new_edges;
 }

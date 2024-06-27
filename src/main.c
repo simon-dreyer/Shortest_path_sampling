@@ -24,7 +24,7 @@ char* string_from_uli(uli x){
   return buf;
 }
 
-char* get_first_part(const char *str, char * which) {
+char* get_first_part(const char *str, const char * which) {
   // Make a copy of the input string since strtok modifies the original string
   char *str_copy = strdup(str);
   if (str_copy == NULL) {
@@ -39,11 +39,16 @@ char* get_first_part(const char *str, char * which) {
     return NULL;
   }
   printf("Graph name : %s\n", token);
-  char dash[] = "_";
-  strcat(token, dash);
-  strcat(token, which);
+  char* result = NULL;
+  result = (char*) malloc(100*sizeof(char));
+  result[0]='\0';
+  const char dash[] = "_";
+  strcat(result, token);
+  strcat(result, dash);
+  strcat(result, which);
   // Return the first part of the string
-  return token;
+  free(str_copy);
+  return result;
 }
 
 uli dicho_label(uli v, Couple_adj** adj_list, uli* nb_count, uli nb_nodes, uli* nb_paths_from_s, uli r){
@@ -284,6 +289,12 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
 
 
 void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
+
+  struct timeval t1, t2;
+  double elapsedTime;
+  // start timer
+  gettimeofday(&t1, NULL);
+
   BFS_ret  res;
   uli nb_nodes = count_nodes(graph);
   char* x;
@@ -303,12 +314,12 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   uli* node_count;
   node_count = (uli*) malloc(nb_nodes*sizeof(uli));
   memset(node_count, 0, nb_nodes*sizeof(node_count));
-
   create_adjacency_list(graph, adj_list, node_count, nb_nodes, directed, 0);
 
   char dist_name[100];
   char nb_path_name[100];
   char tot_path_name[100];
+  char time_name[100];
   /* int n = snprintf(NULL, 0, "%lu", tmp); */
   /* char buf[n+1]; */
   /* char string_node[n+1]; */
@@ -316,8 +327,13 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   strcpy(tot_path_name, first_part);  // Copy str1 into result
   strcat(tot_path_name, "/");   // Add slash
   strcat(tot_path_name,"total_paths.csv");  // Concatenate str2 to result
+
+  strcpy(time_name, first_part);  // Copy str1 into result
+  strcat(time_name, "/");   // Add slash
+  strcat(time_name,"pre_time.csv");  // Concatenate str2 to result
   //printf("tot file : %s\n",tot_path_name);
   FILE* ptr3 = fopen(tot_path_name,"w");
+  FILE* ptr4 = fopen(time_name,"w");
   FILE* ptr = NULL;
   FILE* ptr2 = NULL;
 
@@ -325,13 +341,47 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   for(uli start_node = 0; start_node < nb_nodes; start_node ++){
     //printf("%lu ", start_node);
     res = bfs(start_node, adj_list, node_count, nb_nodes);
+
+
     if(strcmp(which,"i-unrank") == 0)
       {
         dag_to_partial_sum(&res.g, nb_nodes);
       }
     if(strcmp(which,"ob-unrank") == 0)
       {
-        optimal_bunrank_order(&res.g);
+        //adj list for dag
+        uli nb_nodes_dag = count_nodes(&res.g);
+        Couple_adj** adj_list_dag;
+        adj_list_dag = (Couple_adj**) malloc(nb_nodes_dag * sizeof(Couple_adj*));
+        for(uli z = 0; z < nb_nodes_dag; z++){
+          adj_list_dag[z] = (Couple_adj*) malloc(nb_nodes_dag * sizeof(Couple_adj));
+        }
+
+        for(uli z = 0; z < nb_nodes_dag; z++){
+          for(uli y = 0; y < nb_nodes_dag; y++){
+            adj_list_dag[z][y].v = 0;
+            adj_list_dag[z][y].nb = 0;
+          }
+        }
+        uli* node_count_dag;
+        node_count_dag = (uli*) malloc(nb_nodes_dag*sizeof(uli));
+        memset(node_count_dag, 0, nb_nodes_dag*sizeof(node_count_dag));
+        //printf("directed : %s\n", directed);
+        create_adjacency_list(&res.g, adj_list_dag, node_count_dag, nb_nodes_dag, "d", 0);
+        //end adj list for dag
+
+        Couple_pred* ordered_array = (Couple_pred*) malloc(sizeof(Couple_pred)*nb_nodes_dag);
+        for(uli ii=0;ii<nb_nodes_dag;ii++){
+          ordered_array[ii].v = ii;
+          ordered_array[ii].r = res.paths[ii];
+        }
+
+        Edge* new_edges = optimal_bunrank_order(&res.g,  ordered_array, nb_nodes, adj_list_dag, node_count_dag);
+        free(res.g.edges);
+        res.g.edges = new_edges;
+        free(ordered_array);
+        free(node_count_dag);
+        free(adj_list_dag);
       }
     // Print the dag
     //print_graph(&res.g,0);
@@ -339,6 +389,12 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     /* memset(string_node, '\0', sizeof(string_node)); */
     /* n = snprintf(NULL, 0, "%lu", start_node); */
     /* int c = snprintf(string_node, n+1, "%lu", start_node); */
+
+    // stop timer
+    gettimeofday(&t2, NULL);
+    // compute and print the elapsed time in millisec
+    elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+    elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
 
 
     strcpy(dist_name, first_part);  // Copy str1 into result
@@ -360,7 +416,6 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     strcat(nb_path_name,".csv");  // Concatenate str2 to result
     //printf("nb paths file: %s\n",nb_path_name);
     ptr2 = fopen(nb_path_name,"w");
-
 
     // Print distances
     for(uli i = 0; i < nb_nodes; i++){
@@ -408,6 +463,9 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     fprintf(ptr3, "%s\n", x);
     free(x);
 
+    fprintf(ptr4, "%f\n", elapsedTime);
+
+
 
 
     // string of node id in buf
@@ -433,7 +491,6 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     free(res.g.edges);
     free(res.dist);
     free(res.paths);
-
     //printf("end loop\n");
   }
 
@@ -489,7 +546,9 @@ int main(int argc, char *argv[]) {
   if (graph.edges == NULL) {
     return EXIT_FAILURE;
   }
-  char *first_part = get_first_part(argv[1], argv[3]);
+
+  char *first_part = NULL;
+  first_part = get_first_part(argv[1], argv[3]);
 
   // Print the graph
   print_graph(&graph, 0);
@@ -531,6 +590,8 @@ int main(int argc, char *argv[]) {
   // Free allocated memory
   free(graph.edges);
   gsl_rng_free(R);
+
+  free(first_part);
 
   return 0;
 }

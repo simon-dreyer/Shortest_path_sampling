@@ -3,14 +3,14 @@
 typedef unsigned long int uli;
 typedef double wei;
 
-typedef struct {
+typedef struct Edge{
   uli src;
   uli dest;
   wei weight;
   uli nb;
 } Edge;
 
-typedef struct {
+typedef struct Graph{
   Edge *edges;
   uli edge_count;
   int is_weighted;
@@ -24,12 +24,12 @@ typedef struct Node {
 } Node;
 
 // Define the list structure
-typedef struct {
+typedef struct Lis{
   Node* head;
   Node* tail;
 } List;
 
-typedef struct {
+typedef struct HashSet{
   Node **table;
   uli size;
 } HashSet;
@@ -58,7 +58,7 @@ BFS_ret bfs(int start_node, Couple_adj** adj_list, uli*  node_count, uli nb_node
 void print_graph(Graph* graph, int full_info);
 void write_graph(const char *filename, Graph* graph);
 void dag_to_partial_sum(Graph *g, uli nb_nodes);
-void optimal_bunrank_order(Graph* graph);
+Edge* optimal_bunrank_order(Graph* graph, Couple_pred* nb_paths_from_s, uli nb_nodes, Couple_adj** adj_list, uli*  node_count);
 void addNode(List* li, uli data);
 void printList(Node* head);
 void freeList(Node* head);
