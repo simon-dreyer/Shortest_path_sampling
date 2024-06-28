@@ -224,6 +224,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   //printf("DAG is:\n");
   //print_graph(&dag,1);
   uli nb_nodes_dag = count_nodes(&dag);
+  printf("nb nodes dag %lu \n",nb_nodes_dag);
   // printf("nb nodes dag: %lu \n", nb_nodes_dag);
   Couple_adj** adj_list;
   adj_list = (Couple_adj**) malloc(nb_nodes_dag * sizeof(Couple_adj*));
