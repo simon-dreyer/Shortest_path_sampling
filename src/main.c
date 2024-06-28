@@ -321,6 +321,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
 
   BFS_ret  res;
   uli nb_nodes = count_nodes(graph);
+  print("nb nodes in preprocessing %lu\n", nb_nodes);
   char* x;
   //Couple_adj adj_list[nb_nodes][nb_nodes];
   Couple_adj** adj_list;
