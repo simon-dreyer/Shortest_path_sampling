@@ -52,37 +52,38 @@ char* get_first_part(const char *str, const char * which) {
   return result;
 }
 
-uli dicho_label(uli v, Couple_adj** adj_list, uli* nb_count, uli nb_nodes, uli* nb_paths_from_s, uli r){
-  uli i = 0;
-  uli j = nb_count[v]-1;
-  // printf("dicho i %lu j %lu\n",i,j);
-  while(j - i + 1 > 1){
-    uli x = (i+j - 1)/2;
-    // printf("x %lu\n", x);
-    Couple_adj y = adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
-    //uli w = x.v;
-    //uli nb = x.nb;
-    if(y.nb > r){
-      j = x;
-    }
-    else{
-      i = x + 1;
-    }
-  }
-  return j;
+// not used and not up to date
+// uli dicho_label(uli v, Couple_adj** adj_list, uli* nb_count, uli nb_nodes, uli* nb_paths_from_s, uli r){
+//   uli i = 0;
+//   uli j = nb_count[v]-1;
+//   // printf("dicho i %lu j %lu\n",i,j);
+//   while(j - i + 1 > 1){
+//     uli x = (i+j - 1)/2;
+//     // printf("x %lu\n", x);
+//     Couple_adj y = adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
+//     //uli w = x.v;
+//     //uli nb = x.nb;
+//     if(y.nb > r){
+//       j = x;
+//     }
+//     else{
+//       i = x + 1;
+//     }
+//   }
+//   return j;
 
-}
+// }
 
-Couple_pred find_pred_opti(uli v, Couple_adj** adj_list, uli* nb_count, uli nb_nodes, uli* nb_paths_from_s, uli r){
+Couple_pred find_pred_opti(uli v, Graph_rep* g, uli* nb_paths_from_s, uli r){
   //uli i = dicho_label(v, adj_list, nb_count, nb_nodes, nb_paths_from_s,r);
   // avoid function call dicho_label
   uli i = 0;
-  uli j = nb_count[v]-1;
+  uli j = g->node_count[v]-1;
   // printf("dicho i %lu j %lu\n",i,j);
   while(j - i + 1 > 1){
     uli x = (i+j - 1)/2;
     // printf("x %lu\n", x);
-    Couple_adj y = adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
+    Couple_adj y = g->adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
     //uli w = x.v;
     //uli nb = x.nb;
     if(y.nb > r){
@@ -97,15 +98,11 @@ Couple_pred find_pred_opti(uli v, Couple_adj** adj_list, uli* nb_count, uli nb_n
 
 
 
-
-
-
-
-  Couple_adj y = adj_list[v][i];  // *((adj_list+v*nb_nodes + i));
+  Couple_adj y = g->adj_list[v][i];  // *((adj_list+v*nb_nodes + i));
   uli rp = r;
   uli w = y.v;
   if (i > 0){
-    Couple_adj z = adj_list[v][i-1]; // *((adj_list+v*nb_nodes + (i-1)));
+    Couple_adj z = g->adj_list[v][i-1]; // *((adj_list+v*nb_nodes + (i-1)));
     //uli wp = z.v;
     rp = r - z.nb;
   }
@@ -116,10 +113,10 @@ Couple_pred find_pred_opti(uli v, Couple_adj** adj_list, uli* nb_count, uli nb_n
   return res;
 }
 
-Couple_pred find_pred(uli v, Couple_adj** adj_list, uli nb_nodes, uli* nb_paths_from_s, uli r){
+Couple_pred find_pred(uli v, Graph_rep* g, uli* nb_paths_from_s, uli r){
   //printf("find pred start : v %lu r %lu\n",v,r);
   uli i = 0;
-  Couple_adj z = adj_list[v][0]; // *((adj_list+v*nb_nodes));
+  Couple_adj z = g->adj_list[v][0]; // *((adj_list+v*nb_nodes));
   uli w = z.v;
   //printf("--------- val %lu \n", nb_paths_from_s[w]);
   uli rp = r - nb_paths_from_s[w];
@@ -127,7 +124,7 @@ Couple_pred find_pred(uli v, Couple_adj** adj_list, uli nb_nodes, uli* nb_paths_
   while(rp < r){
     i = i + 1;
     //printf("look for pred iteration %lu : %lu %lu\n", i, w,rp);
-    z = adj_list[v][i];  // *((adj_list+v*nb_nodes) + i);
+    z = g->adj_list[v][i];  // *((adj_list+v*nb_nodes) + i);
     w = z.v;
     rp = rp - nb_paths_from_s[w];
     //printf("--------- val %lu \n", nb_paths_from_s[w]);
@@ -140,7 +137,13 @@ Couple_pred find_pred(uli v, Couple_adj** adj_list, uli nb_nodes, uli* nb_paths_
   return y;
 }
 
-List build_rank_b(Couple_adj** adj_list, uli* node_count, uli nb_nodes, uli* nb_paths_from_s, uli source_node, uli target_node, uli rank, char* which){
+List build_rank_b(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, uli rank, char* which){
+  uli source_node, target_node;
+  find(g->id_rev, s, &source_node);
+  find(g->id_rev, t, &target_node);
+  // uli source_node = g->id_rev[s];
+  // uli target_node = g->id_rev[t];
+
   List path;
   initList(&path);
 
@@ -149,18 +152,18 @@ List build_rank_b(Couple_adj** adj_list, uli* node_count, uli nb_nodes, uli* nb_
   Couple_pred x;
   while(v != source_node){
     //printf("new iteration while current v %lu\n",v);
-    addNode(&path, v);
+    addNode(&path, g->ids[v]);
     if (strcmp(which,"i-unrank") == 0){
-      x = find_pred_opti(v, adj_list, node_count, nb_nodes, nb_paths_from_s, r); 
+      x = find_pred_opti(v, g, nb_paths_from_s, r); 
     }
     else{
-      x = find_pred(v, adj_list, nb_nodes, nb_paths_from_s, r);
+      x = find_pred(v, g, nb_paths_from_s, r);
     }
     r = x.r;
     v = x.v;
     //  printf("couple result node %lu new rank %lu\n",v,r);
   }
-  addNode(&path, v);
+  addNode(&path, g->ids[v]);
   return path;
 }
 
@@ -194,13 +197,12 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
 
   // printf("nbpath_name : %s \n", nbpath_name);
   char line[256];
-  uli nb_nodes = count_nodes(graph);
   uli* nb_paths_from_s = NULL;
-  nb_paths_from_s = (uli*)malloc((nb_nodes+1) * sizeof(uli));
+  nb_paths_from_s = (uli*)malloc((graph->nb_nodes+1) * sizeof(uli));
   if (nb_paths_from_s == NULL) {
     perror("Error allocating memory");
   }
-  memset(nb_paths_from_s, 0, nb_nodes*sizeof(uli));
+  memset(nb_paths_from_s, 0, graph->nb_nodes*sizeof(uli));
 
   FILE *file = fopen(nbpath_name, "r");
   if (file == NULL) {
@@ -223,25 +225,25 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
 
   //printf("DAG is:\n");
   //print_graph(&dag,1);
-  uli nb_nodes_dag = count_nodes(&dag);
-  printf("nb nodes dag %lu \n",nb_nodes_dag);
-  // printf("nb nodes dag: %lu \n", nb_nodes_dag);
-  Couple_adj** adj_list;
-  adj_list = (Couple_adj**) malloc(nb_nodes_dag * sizeof(Couple_adj*));
-  for(uli i = 0; i < nb_nodes_dag; i++){
-    adj_list[i] = (Couple_adj*) malloc(nb_nodes_dag * sizeof(Couple_adj));
-  }
+  // uli nb_nodes_dag = count_nodes(&dag);
+  // printf("nb nodes dag %lu \n",nb_nodes_dag);
+  // // printf("nb nodes dag: %lu \n", nb_nodes_dag);
+  // Couple_adj** adj_list;
+  // adj_list = (Couple_adj**) malloc(nb_nodes_dag * sizeof(Couple_adj*));
+  // for(uli i = 0; i < nb_nodes_dag; i++){
+  //   adj_list[i] = (Couple_adj*) malloc(nb_nodes_dag * sizeof(Couple_adj));
+  // }
 
-  for(uli i = 0; i < nb_nodes_dag; i++){
-    for(uli j = 0; j < nb_nodes_dag; j++){
-      adj_list[i][j].v = 0;
-      adj_list[i][j].nb = 0;
-    }
-  }
-  uli* node_count;
-  node_count = (uli*) malloc(nb_nodes_dag*sizeof(uli));
-  memset(node_count, 0, nb_nodes_dag*sizeof(uli));
-  create_adjacency_list(&dag, adj_list, node_count, nb_nodes_dag, "d", 1);
+  // for(uli i = 0; i < nb_nodes_dag; i++){
+  //   for(uli j = 0; j < nb_nodes_dag; j++){
+  //     adj_list[i][j].v = 0;
+  //     adj_list[i][j].nb = 0;
+  //   }
+  // }
+  // uli* node_count;
+  // node_count = (uli*) malloc(nb_nodes_dag*sizeof(uli));
+  // memset(node_count, 0, nb_nodes_dag*sizeof(uli));
+  Graph_rep rdag = create_adjacency_list(&dag, "d", 1);
 
   /* for(uli i = 0; i < nb_nodes_dag; i++){ */
   /*   for(uli j = 0; j < node_count[i]; j++){ */
@@ -269,7 +271,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
     uli rank = gsl_rng_uniform_int(R, nb_paths_from_s[target_node]);
     //printf("******************** query %lu rank sampled : %lu from a total of %lu \n", que, rank, nb_paths_from_s[target_node]);
 
-    paths[que] = build_rank_b(adj_list, node_count, nb_nodes_dag, nb_paths_from_s, source_node, target_node, rank, which);
+    paths[que] = build_rank_b(&rdag, nb_paths_from_s, source_node, target_node, rank, which);
     //printf("sampled path : \n");
     //reverseList(&paths[que]);
     //printList(paths[que].head);
@@ -297,12 +299,8 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
     freeList(paths[que].head);
   }
 
-  for(uli i = 0; i < nb_nodes_dag; i++){
-    free(adj_list[i]);
-  }
-  free(adj_list);
-  //printf("end preprocessing bef \n");
-  free(node_count);
+ free_graph_rep(&rdag);
+
   free(paths);
   free(nb_paths_from_s);
   free(dag.edges);
@@ -320,26 +318,27 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   gettimeofday(&t1, NULL);
 
   BFS_ret  res;
-  uli nb_nodes = count_nodes(graph);
-  printf("nb nodes in preprocessing %lu\n", nb_nodes);
   char* x;
   //Couple_adj adj_list[nb_nodes][nb_nodes];
-  Couple_adj** adj_list;
-  adj_list = (Couple_adj**) malloc(nb_nodes * sizeof(Couple_adj*));
-  for(uli i = 0; i < nb_nodes; i++){
-    adj_list[i] = (Couple_adj*) malloc(nb_nodes * sizeof(Couple_adj));
-  }
+  // Couple_adj** adj_list;
+  // adj_list = (Couple_adj**) malloc(nb_nodes * sizeof(Couple_adj*));
+  // for(uli i = 0; i < nb_nodes; i++){
+  //   adj_list[i] = (Couple_adj*) malloc(nb_nodes * sizeof(Couple_adj));
+  // }
 
-  for(uli i = 0; i < nb_nodes; i++){
-    for(uli j = 0; j < nb_nodes; j++){
-      adj_list[i][j].v = 0;
-      adj_list[i][j].nb = 0;
-    }
-  }
-  uli* node_count;
-  node_count = (uli*) malloc(nb_nodes*sizeof(uli));
-  memset(node_count, 0, nb_nodes*sizeof(node_count));
-  create_adjacency_list(graph, adj_list, node_count, nb_nodes, directed, 0);
+  // for(uli i = 0; i < nb_nodes; i++){
+  //   for(uli j = 0; j < nb_nodes; j++){
+  //     adj_list[i][j].v = 0;
+  //     adj_list[i][j].nb = 0;
+  //   }
+  // }
+  // uli* node_count;
+  // node_count = (uli*) malloc(nb_nodes*sizeof(uli));
+  // memset(node_count, 0, nb_nodes*sizeof(node_count));
+  // create_adjacency_list(graph, adj_list, node_count, nb_nodes, directed, 0);
+
+  Graph_rep A = create_adjacency_list(graph, directed, 0);
+  // print_graph_rep(&A);
 
   char dist_name[100];
   char nb_path_name[100];
@@ -363,9 +362,9 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   FILE* ptr2 = NULL;
 
   // Perform BFS from all nodes and store dags in a directory with the filename before dot
-  for(uli start_node = 0; start_node < nb_nodes; start_node ++){
+  for(uli start_node = 0; start_node < graph->nb_nodes; start_node ++){
     //printf("%lu ", start_node);
-    res = bfs(start_node, adj_list, node_count, nb_nodes);
+    res = bfs(start_node, &A);
     if(start_node%1000 == 0){
       printf("cur %lu ,", start_node/1000);
     }
@@ -373,55 +372,56 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
 
     if(strcmp(which,"i-unrank") == 0)
       {
-        dag_to_partial_sum(&res.g, nb_nodes);
+        dag_to_partial_sum(&res.g, graph->nb_nodes);
       }
     if(strcmp(which,"ob-unrank") == 0)
       {
-        //adj list for dag
-        uli nb_nodes_dag = count_nodes(&res.g);
-        Couple_adj** adj_list_dag;
-        adj_list_dag = (Couple_adj**) malloc(nb_nodes_dag * sizeof(Couple_adj*));
-        for(uli z = 0; z < nb_nodes_dag; z++){
-          adj_list_dag[z] = (Couple_adj*) malloc(nb_nodes_dag * sizeof(Couple_adj));
-        }
+    //     //adj list for dag
+    //     uli nb_nodes_dag = count_nodes(&res.g);
+    //     HashSet* h = nodes(&res.g);
+    //     uli* nodes_dag = (uli*) malloc(nb_nodes_dag*sizeof(uli));
+    //     uli zz = 0;
+    //     for (uli i = 0; i < h->size; ++i) {
+    //     Node* current = h->table[i];
+    //     while (current != NULL) {
+    //         //printf("%lu\n", current->data);
+    //         nodes_dag[zz] = current->data;
+    //         current = current->next;
+    //     }
+    // }
 
-        for(uli z = 0; z < nb_nodes_dag; z++){
-          for(uli y = 0; y < nb_nodes_dag; y++){
-            adj_list_dag[z][y].v = 0;
-            adj_list_dag[z][y].nb = 0;
-          }
-        }
-        uli* node_count_dag;
-        node_count_dag = (uli*) malloc(nb_nodes_dag*sizeof(uli));
-        memset(node_count_dag, 0, nb_nodes_dag*sizeof(node_count_dag));
-        //printf("directed : %s\n", directed);
-        create_adjacency_list(&res.g, adj_list_dag, node_count_dag, nb_nodes_dag, "d", 0);
-        //end adj list for dag
 
-        Couple_pred* ordered_array = (Couple_pred*) malloc(sizeof(Couple_pred)*nb_nodes_dag);
-        for(uli ii=0;ii<nb_nodes_dag;ii++){
+    //     Couple_adj** adj_list_dag;
+    //     adj_list_dag = (Couple_adj**) malloc(nb_nodes_dag * sizeof(Couple_adj*));
+    //     for(uli z = 0; z < nb_nodes_dag; z++){
+    //       adj_list_dag[z] = (Couple_adj*) malloc(nb_nodes_dag * sizeof(Couple_adj));
+    //     }
+
+    //     for(uli z = 0; z < nb_nodes_dag; z++){
+    //       for(uli y = 0; y < nb_nodes_dag; y++){
+    //         adj_list_dag[z][y].v = 0;
+    //         adj_list_dag[z][y].nb = 0;
+    //       }
+    //     }
+    //     uli* node_count_dag;
+    //     node_count_dag = (uli*) malloc(nb_nodes_dag*sizeof(uli));
+    //     memset(node_count_dag, 0, nb_nodes_dag*sizeof(node_count_dag));
+    //     //printf("directed : %s\n", directed);
+    //     create_adjacency_list(&res.g, adj_list_dag, node_count_dag, nb_nodes_dag, "d", 0);
+    //     //end adj list for dag
+
+        Couple_pred* ordered_array = (Couple_pred*) malloc(sizeof(Couple_pred)*res.g.nb_nodes);
+        for(uli ii=0;ii<res.g.nb_nodes;ii++){
           ordered_array[ii].v = ii;
           ordered_array[ii].r = res.paths[ii];
         }
-
-        Edge* new_edges = optimal_bunrank_order(&res.g,  ordered_array, nb_nodes, adj_list_dag, node_count_dag);
+        Graph_rep rdag = create_adjacency_list(&res.g, "d", 0);
+        Edge* new_edges = optimal_bunrank_order(res.g.edge_count,  ordered_array, &rdag);
         free(res.g.edges);
         res.g.edges = new_edges;
         free(ordered_array);
-        free(node_count_dag);
-
-        for(uli zz = 0; zz < nb_nodes_dag; zz++){
-          free(adj_list_dag[zz]);
-        }
-
-        free(adj_list_dag);
+        free_graph_rep(&rdag);
       }
-    // Print the dag
-    //print_graph(&res.g,0);
-
-    /* memset(string_node, '\0', sizeof(string_node)); */
-    /* n = snprintf(NULL, 0, "%lu", start_node); */
-    /* int c = snprintf(string_node, n+1, "%lu", start_node); */
 
     // stop timer
     gettimeofday(&t2, NULL);
@@ -451,47 +451,28 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     ptr2 = fopen(nb_path_name,"w");
 
     // Print distances
-    for(uli i = 0; i < nb_nodes; i++){
-      //printf("dist %lu -> %lu = %lu\n", start_node, i, res.dist[i]);
-      /* memset(buf, '\0', sizeof(buf)); */
-      /* n = snprintf(NULL, 0, "%lu", res.dist[i]); */
-      /* int c = snprintf(buf, n+1, "%lu", res.dist[i]); */
+    for(uli i = 0; i < graph->nb_nodes; i++){
+      
       x = string_from_uli(res.dist[i]);
       fprintf(ptr, "%s\n", x);
       free(x);
-      /* if (i == nb_nodes - 1){ */
-      /*   fprintf(ptr, "%s\n", buf); */
-      /* } */
-      /* else{ */
-      /*   fprintf(ptr, "%s ", buf); */
-      /* } */
+      
     }
 
     // Print nb_paths
     uli total_nb_paths = 0;
-    for(uli i = 0; i < nb_nodes; i++){
+    for(uli i = 0; i < graph->nb_nodes; i++){
       total_nb_paths += res.paths[i];
-      //printf(" nb_paths [%lu] = %lu\n", i, res.paths[i]);
-
-      /* memset(buf, '\0', sizeof(buf)); */
-      /* n = snprintf(NULL, 0, "%lu", res.paths[i]); */
-      /* int c = snprintf(buf, n+1, "%lu", res.paths[i]); */
+      
       x = string_from_uli(res.paths[i]);
       fprintf(ptr2, "%s\n", x);
       free(x);
-      /* if (i == nb_nodes - 1){ */
-      /*   fprintf(ptr2, "%s\n", buf); */
-      /* } */
-      /* else{ */
-      /*   fprintf(ptr2, "%s ", buf); */
-      /* } */
+      
     }
 
     total += total_nb_paths;
     // Print total paths from start_node
-    /* memset(buf, '\0', sizeof(buf)); */
-    /* n = snprintf(NULL, 0, "%lu", total_nb_paths); */
-    /* c = snprintf(buf, n+1, "%lu", total_nb_paths); */
+    
     x = string_from_uli(total_nb_paths);
     fprintf(ptr3, "%s\n", x);
     free(x);
@@ -528,9 +509,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   }
 
   // Print total paths
-  /* memset(buf, '\0', sizeof(buf)); */
-  /* n = snprintf(NULL, 0, "%lu", total); */
-  /* int c = snprintf(buf, n+1, "%lu", total); */
+ 
   x = string_from_uli(total);
   fprintf(ptr3, "%s ", x);
   free(x);
@@ -540,13 +519,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   printf("end writing after loop bfs\n");
   // If want to start from specific node
   //uli start_node = strtoul(argv[2],&endPtr,10);
-  printf("nb nodes when free %lu\n", nb_nodes);
-  for(uli i = 0; i < nb_nodes; i++){
-    free(adj_list[i]);
-  }
-  free(adj_list);
-  printf("end preprocessing bef \n");
-  free(node_count);
+  free_graph_rep(&A);
 
   printf("end preprocessing\n");
 }

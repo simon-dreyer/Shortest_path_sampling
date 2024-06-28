@@ -19,8 +19,7 @@ void print_graph(Graph* graph, int full_info){
       }
     } 
   }
-  uli nb_nodes = count_nodes(graph);
-  printf("Number of nodes : %lu number of edges : %lu\n", nb_nodes, graph->edge_count);
+  printf("Number of nodes : %lu number of edges : %lu\n", graph->nb_nodes, graph->edge_count);
 }
 
 void write_graph(const char *filename, Graph* graph) {
@@ -40,12 +39,18 @@ void write_graph(const char *filename, Graph* graph) {
 Graph read_graph(const char *filename, int is_weighted) {
     FILE *file;
     Edge *edges = NULL;
-    int edge_capacity = 10; // Initial capacity for edges array
-    int edge_count = 0;
-    Graph graph = {NULL, 0};
+    uli edge_capacity = 10; // Initial capacity for edges array
+    uli edge_count = 0;
+    Graph graph = {NULL, 0,0,0,0};
 
     // Allocate initial memory for edges
     edges = (Edge *)malloc(edge_capacity * sizeof(Edge));
+    for(uli i = 0;i< edge_capacity;i++){
+      edges[i].src = 0;
+      edges[i].dest = 0;
+      edges[i].weight = 0.0;
+      edges[i].nb = 0;
+    }
     if (edges == NULL) {
         perror("Error allocating memory");
         return graph;
@@ -78,6 +83,12 @@ Graph read_graph(const char *filename, int is_weighted) {
         if (edge_count >= edge_capacity) {
           edge_capacity *= 2;
           edges = (Edge *)realloc(edges, edge_capacity * sizeof(Edge));
+          for(uli i = edge_capacity/2;i< edge_capacity;i++){
+            edges[i].src = 0;
+            edges[i].dest = 0;
+            edges[i].weight = 0.0;
+            edges[i].nb = 0;
+          }
           if (edges == NULL) {
             perror("Error reallocating memory");
             fclose(file);
@@ -93,6 +104,7 @@ Graph read_graph(const char *filename, int is_weighted) {
 
     graph.edges = edges;
     graph.edge_count = edge_count;
+    graph.nb_nodes = count_nodes(edges, edge_count);
     return graph;
 }
 
@@ -243,15 +255,99 @@ void writeListToFile(List* head, uli nb, const char* filename) {
 
     fclose(file);
 }
+
+Dictionary* createDictionary(uli size) {
+    Dictionary* dict = (Dictionary*)malloc(sizeof(Dictionary));
+    dict->size = size;
+    dict->table = (Node_dic**)malloc(size * sizeof(Node_dic*));
+    for (uli i = 0; i < size; ++i) {
+        dict->table[i] = NULL;
+    }
+    return dict;
+}
+
+// Hash function to map keys to indices
+uli hashFunction(uli key, uli size) {
+    return key % size;
+}
+
+// Function to insert a key-value pair into the dictionary
+void insert(Dictionary* dict, uli key, uli value) {
+    uli index = hashFunction(key, dict->size);
+    Node_dic* newNode = (Node_dic*)malloc(sizeof(Node_dic));
+    newNode->key = key;
+    newNode->value = value;
+    newNode->next = dict->table[index];
+    dict->table[index] = newNode;
+}
+
+// Function to find a value by key in the dictionary
+bool find(Dictionary* dict, uli key, uli* value) {
+    uli index = hashFunction(key, dict->size);
+    Node_dic* current = dict->table[index];
+    while (current != NULL) {
+        if (current->key == key) {
+            *value = current->value;
+            return true;
+        }
+        current = current->next;
+    }
+    return false;
+}
+
+// Function to free the memory used by the dictionary
+void freeDictionary(Dictionary* dict) {
+    for (uli i = 0; i < dict->size; ++i) {
+        Node_dic* current = dict->table[i];
+        while (current != NULL) {
+            Node_dic* temp = current;
+            current = current->next;
+            free(temp);
+        }
+    }
+    free(dict->table);
+    free(dict);
+}
+
+void printDictionary(Dictionary* dict) {
+    for (uli i = 0; i < dict->size; ++i) {
+        Node_dic* current = dict->table[i];
+        while (current != NULL) {
+            printf("Key: %lu, Value: %lu\n", current->key, current->value);
+            current = current->next;
+        }
+    }
+}
+
+
 /////////////////////////////////////: End HashSet and List ////////////////////////////
 
-uli count_nodes(Graph* graph) {
+HashSet* nodes(Graph* graph) {
   HashSet *hash_set = create_hash_set(2 * graph->edge_count);
-  int node_count = 0;
 
   for (uli i = 0; i < graph->edge_count; i++) {
     uli src = graph->edges[i].src;
     uli dest = graph->edges[i].dest;
+
+    if (!contains(hash_set, src)) {
+      add(hash_set, src);
+    }
+    if (!contains(hash_set, dest)) {
+      add(hash_set, dest);
+    }
+  }
+
+  //free_hash_set(hash_set);
+  return hash_set;
+}
+
+uli count_nodes(Edge* edges, uli edge_count) {
+  HashSet *hash_set = create_hash_set(2 * edge_count);
+  int node_count = 0;
+
+  for (uli i = 0; i < edge_count; i++) {
+    uli src = edges[i].src;
+    uli dest = edges[i].dest;
 
     if (!contains(hash_set, src)) {
       add(hash_set, src);
@@ -267,28 +363,19 @@ uli count_nodes(Graph* graph) {
   return node_count;
 }
 
-void create_adjacency_list(Graph* graph, Couple_adj** adj_list, uli*  node_count, uli nb_nodes, char* directed, int is_reversed) {
-  //Couple_adj* res = (Couple_adj*) malloc(graph->edge_count * sizeof(Couple_adj));
+void fill_in_node_count(Graph* graph, uli*  node_count, Dictionary* id_rev, char* directed, int is_reversed) {
+  //printf("node count directed %s, %d is_reversed\n",directed,is_reversed);
+  uli value = 0;
   if(!is_reversed){
     for (uli i = 0; i < graph->edge_count; i++) {
       uli src = graph->edges[i].src;
       uli dest = graph->edges[i].dest;
-      //res[i].v = dest;
-      //res[i].nb = graph->edges[i].nb;
-      adj_list[src][node_count[src]].v = dest;
-      adj_list[src][node_count[src]].nb = graph->edges[i].nb;
-      //(*((adj_list+src*nb_nodes) + node_count[src])).v = dest;
-      //(*((adj_list+src*nb_nodes) + node_count[src])).nb = graph->edges[i].nb;
-      node_count[src] ++;
+      find(id_rev, src, &value);
+      node_count[value] ++;
       if (strcmp(directed,"u") == 0)
         {
-          //res[i].v = src;
-          //res[i].nb = graph->edges[i].nb;
-          adj_list[dest][node_count[dest]].v = src;
-          adj_list[dest][node_count[dest]].nb = graph->edges[i].nb;
-          /* (*((adj_list+dest*nb_nodes) + node_count[dest])).v = src; */
-          /* (*((adj_list+dest*nb_nodes) + node_count[dest])).nb = graph->edges[i].nb; */
-          node_count[dest] ++;
+          find(id_rev, dest, &value);
+          node_count[value] ++;
         }
     } 
   }
@@ -296,39 +383,165 @@ void create_adjacency_list(Graph* graph, Couple_adj** adj_list, uli*  node_count
     for (uli i = 0; i < graph->edge_count; i++) {
       uli dest = graph->edges[i].src;
       uli src = graph->edges[i].dest;
-      //res[i].v = dest;
-      //res[i].nb = graph->edges[i].nb;
-      adj_list[src][node_count[src]].v = dest;
-      adj_list[src][node_count[src]].nb = graph->edges[i].nb;
-      /* (*((adj_list+src*nb_nodes) + node_count[src])).v = dest; */
-      /* (*((adj_list+src*nb_nodes) + node_count[src])).nb = graph->edges[i].nb; */
-      node_count[src] ++;
+      find(id_rev, src, &value);
+      node_count[value] ++;
       if (strcmp(directed,"u") == 0)
         {
-          //res[i].v = src;
-          //res[i].nb = graph->edges[i].nb;
-          adj_list[dest][node_count[dest]].v = src;
-          adj_list[dest][node_count[dest]].nb = graph->edges[i].nb;
-          /* (*((adj_list+dest*nb_nodes) + node_count[dest])).v = src; */
-          /* (*((adj_list+dest*nb_nodes) + node_count[dest])).nb = graph->edges[i].nb; */
-          node_count[dest] ++;
+          find(id_rev, dest, &value);
+          node_count[value] ++;
         }
     }
   }
 }
 
-BFS_ret bfs(int start_node, Couple_adj** adj_list, uli*  node_count, uli nb_nodes) {
-  uli visited[nb_nodes];
+
+void fill_in_adjacency_list(Graph* graph, Couple_adj** adj_list, uli*  node_count, Dictionary* id_rev, char* directed, int is_reversed) {
+  uli dsrc, ddest;
+  if(!is_reversed){
+    for (uli i = 0; i < graph->edge_count; i++) {
+      uli src = graph->edges[i].src;
+      uli dest = graph->edges[i].dest;
+      find(id_rev, src, &dsrc);
+      find(id_rev, dest, &ddest);
+
+      adj_list[dsrc][node_count[dsrc]].v = ddest;
+      adj_list[dsrc][node_count[dsrc]].nb = graph->edges[i].nb;
+      node_count[dsrc] ++;
+      
+      if (strcmp(directed,"u") == 0)
+        {
+          
+          adj_list[ddest][node_count[ddest]].v = dsrc;
+          adj_list[ddest][node_count[ddest]].nb = graph->edges[i].nb;
+          node_count[ddest] ++;
+        }
+    } 
+  }
+  else{
+    for (uli i = 0; i < graph->edge_count; i++) {
+      uli dest = graph->edges[i].src;
+      uli src = graph->edges[i].dest;
+      find(id_rev, src, &dsrc);
+      find(id_rev, dest, &ddest);
+
+      adj_list[dsrc][node_count[dsrc]].v = ddest;
+      adj_list[dsrc][node_count[dsrc]].nb = graph->edges[i].nb;
+      node_count[dsrc] ++;
+      if (strcmp(directed,"u") == 0)
+        {
+          adj_list[ddest][node_count[ddest]].v = dsrc;
+          adj_list[ddest][node_count[ddest]].nb = graph->edges[i].nb;
+          node_count[ddest] ++;
+        }
+    }
+  }
+}
+
+
+Graph_rep create_adjacency_list(Graph* g, char* directed, int is_reversed){
+
+  Graph_rep A;
+
+  // creation of ids and ids rev
+  HashSet* h = nodes(g);
+  uli* nodes_id = (uli*) malloc(g->nb_nodes*sizeof(uli));
+  Dictionary* nodes_id_rev = createDictionary(g->nb_nodes);
+  uli zz = 0;
+  for (uli i = 0; i < h->size; ++i) {
+  Node* current = h->table[i];
+  while (current != NULL) {
+      //printf("%lu\n", current->data);
+      nodes_id[zz] = current->data;
+      current = current->next;
+      zz++;
+    }
+  }
+  for(uli i = 0;i < g->nb_nodes; i++){
+    insert(nodes_id_rev ,nodes_id[i],i);
+  }
+  A.ids = nodes_id;
+  A.id_rev = nodes_id_rev;
+  //end creation of ids and id rev
+
+
+  // fill in node count
+  Couple_adj** adj_list = NULL;
+  adj_list = (Couple_adj**) malloc(g->nb_nodes * sizeof(Couple_adj*));
+  // for(uli i =0; i < g->nb_nodes;i++){
+  //   adj_list[i] = NULL;
+  // }
+
+  uli* node_count = NULL;
+  node_count = (uli*) malloc(g->nb_nodes*sizeof(uli));
+  memset(node_count, 0, g-> nb_nodes*sizeof(uli));
+  fill_in_node_count(g, node_count, nodes_id_rev, directed, is_reversed);
+  // end fill in node count
+  // for(uli j = 0; j< g->nb_nodes;j++)
+  //   printf("during creation node_count[%lu] = %lu\n",j,node_count[j]);
+
+  for(uli z = 0; z < g->nb_nodes; z++){
+    adj_list[z] = (Couple_adj*) malloc(node_count[z] * sizeof(Couple_adj));
+  }
+
+  for(uli z = 0; z < g->nb_nodes; z++){
+    for(uli y = 0; y < node_count[z]; y++){
+      adj_list[z][y].v = 0;
+      adj_list[z][y].nb = 0;
+    }
+  }
+    memset(node_count, 0, g->nb_nodes*sizeof(uli));
+    fill_in_adjacency_list(g, adj_list, node_count, nodes_id_rev, directed, is_reversed);
+    // for(uli j = 0; j< g->nb_nodes;j++)
+    // printf("end creation node_count[%lu] = %lu\n",j,node_count[j]);
+    A.node_count = node_count;
+    A.adj_list = adj_list;
+    A.nb_nodes = g->nb_nodes;
+
+    free_hash_set(h);
+    return A;
+}
+
+void free_graph_rep(Graph_rep* g){
+  for(uli i=0; i < g->nb_nodes;i++){
+    free(g->adj_list[i]);
+  }
+  free(g->node_count);
+  free(g->ids);
+  freeDictionary(g->id_rev);
+  free(g->adj_list);
+}
+
+
+void print_graph_rep(Graph_rep* g){
+  printf("Graph Rep*************\n nb nodes %lu\n",g->nb_nodes);
+  for(uli i = 0;i < g->nb_nodes;i++){
+    printf("node_count[%lu] = %lu\n",i,g->node_count[i]);
+  }
+  for(uli i = 0;i < g->nb_nodes;i++){
+    printf("ids[%lu] = %lu\n",i,g->ids[i]);
+  }
+  printDictionary(g->id_rev);
+
+  for(uli i = 0;i < g->nb_nodes;i++){
+    for(uli j = 0;j < g->node_count[i];j++){
+      printf("adj_list[%lu][%lu] = v %lu, r %lu \n",i,j,g->adj_list[i][j].v, g->adj_list[i][j].nb);
+    }
+  }
+}
+
+
+BFS_ret bfs(int start_node, Graph_rep* A) {
+  uli visited[A->nb_nodes];
   uli* distances;
   uli* nb_paths;
-  distances = malloc(nb_nodes* sizeof(uli));
-  nb_paths = malloc(nb_nodes* sizeof(uli));
-  for(uli i = 0;i < nb_nodes;i++){
+  distances = malloc(A->nb_nodes* sizeof(uli));
+  nb_paths = malloc(A->nb_nodes* sizeof(uli));
+  for(uli i = 0;i < A->nb_nodes;i++){
     distances[i] = ULONG_MAX;
     nb_paths[i] = 0;
   }
   memset(visited, 0, sizeof visited);
-  uli queue[nb_nodes];
+  uli queue[A->nb_nodes];
   uli front = 0, rear = 0;
   BFS_ret res;
 
@@ -357,8 +570,8 @@ BFS_ret bfs(int start_node, Couple_adj** adj_list, uli*  node_count, uli nb_node
     uli current_node = queue[front++];
     //printf("%lu ", current_node);
     Couple_adj z;
-    for (uli i = 0; i < node_count[current_node]; i++) {
-      z = adj_list[current_node][i];
+    for (uli i = 0; i < A->node_count[current_node]; i++) {
+      z = A->adj_list[current_node][i];
       //*((adj_list + current_node*nb_nodes) + i);
       uli neighbor = z.v;
       if (!visited[neighbor]) {
@@ -422,31 +635,26 @@ int compareElem(const void *a, const void *b) {
   return (A->r < B->r) - (A->r > B->r);
 }
 
-Edge * optimal_bunrank_order(Graph* graph, Couple_pred* nb_paths_from_s, uli nb_nodes, Couple_adj** adj_list, uli*  node_count){
+Edge * optimal_bunrank_order(uli edge_count, Couple_pred* nb_paths_from_s, Graph_rep* A){
   // il est possible de faire mieux en pratique probablement en ordonnant directement les aretes entrantes d'un noeud
-  qsort(nb_paths_from_s, nb_nodes, sizeof(Couple_pred) ,compareElem);
+  qsort(nb_paths_from_s, A->nb_nodes, sizeof(Couple_pred) ,compareElem);
   /* for(uli jj=0; jj<nb_nodes;jj++) */
   /*   printf("v %lu nb %lu edge count %lu node count : %lu\n",nb_paths_from_s[jj].v, nb_paths_from_s[jj].r, graph->edge_count, node_count[jj]); */
-  Edge * new_edges = (Edge *) malloc(graph->edge_count * sizeof(Edge));
+  Edge * new_edges = (Edge *) malloc(edge_count * sizeof(Edge));
   if (new_edges == NULL)
     {
       printf("optimal_bunrank_order: malloc problem allocation\n");
       exit(-1);
     }
   uli ii = 0;
-  for(uli i = 0; i < nb_nodes; i++){
-    for(uli j = 0; j < node_count[nb_paths_from_s[i].v]; j++){
+  for(uli i = 0; i < A->nb_nodes; i++){
+    for(uli j = 0; j < A->node_count[nb_paths_from_s[i].v]; j++){
       new_edges[ii].src = nb_paths_from_s[i].v;
-      new_edges[ii].dest = adj_list[nb_paths_from_s[i].v][j].v;
+      new_edges[ii].dest = A->adj_list[nb_paths_from_s[i].v][j].v;
       new_edges[ii].nb = nb_paths_from_s[i].r;
       new_edges[ii].weight = 0.0;
       ii++;
     }
   }
-  /* puts("hello2"); */
-  /* free(graph->edges); */
-  /* puts("hello3"); */
-  /* graph->edges = new_edges; */
-  /* puts("hello4"); */
   return new_edges;
 }
