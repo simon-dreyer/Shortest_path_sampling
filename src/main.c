@@ -364,8 +364,8 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   for(uli start_node = 0; start_node < nb_nodes; start_node ++){
     //printf("%lu ", start_node);
     res = bfs(start_node, adj_list, node_count, nb_nodes);
-    if(start_node%2 == 0){
-      printf("cur %lu ,", start_node/2);
+    if(start_node%1000 == 0){
+      printf("cur %lu ,", start_node/1000);
     }
 
 
