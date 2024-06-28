@@ -15,8 +15,9 @@
 gsl_rng * R;  /* global generator */
 
 char* string_from_uli(uli x){
-  uli tmp = 0;
-  int n = snprintf(NULL, 0, "%lu", tmp);
+  char tmp2[100];
+  int n = snprintf(tmp2, 100, "%lu", x);
+  //printf("string from %d and x %lu \n", n, x);
   char* buf =(char*) malloc((n+1)*sizeof(char));
   memset(buf, '\0', (n+1)*sizeof(char));
   n = snprintf(NULL, 0, "%lu", x);
@@ -165,6 +166,7 @@ List build_rank_b(Couple_adj** adj_list, uli* node_count, uli nb_nodes, uli* nb_
 
 void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, char* first_part, char* which){
   printf("start queries\n");
+  char* x;
   //uli tmp;
   //int n = snprintf(NULL, 0, "%lu", tmp);
   //char string_node[n+1];
@@ -176,22 +178,29 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   char nbpath_name[100];
   strcpy(nbpath_name, first_part);  // Copy str1 into result
   strcat(nbpath_name, "/nb_paths_");
-  strcat(nbpath_name, string_from_uli(source_node));
+  x = string_from_uli(source_node);
+  strcat(nbpath_name, x);
+  free(x);
   strcat(nbpath_name, ".csv");
 
   char dag_name[100];
   strcpy(dag_name, first_part);  // Copy str1 into result
   strcat(dag_name, "/");
-  strcat(dag_name, string_from_uli(source_node));
+  x = string_from_uli(source_node);
+  strcat(dag_name, x);
+  free(x);
   strcat(dag_name, ".edges");
+  Graph dag = read_graph(dag_name, 1);
 
   // printf("nbpath_name : %s \n", nbpath_name);
   char line[256];
   uli nb_nodes = count_nodes(graph);
-  uli* nb_paths_from_s = (uli*)malloc((nb_nodes+1) * sizeof(uli));
+  uli* nb_paths_from_s = NULL;
+  nb_paths_from_s = (uli*)malloc((nb_nodes+1) * sizeof(uli));
   if (nb_paths_from_s == NULL) {
     perror("Error allocating memory");
   }
+  memset(nb_paths_from_s, 0, nb_nodes*sizeof(uli));
 
   FILE *file = fopen(nbpath_name, "r");
   if (file == NULL) {
@@ -212,7 +221,6 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   }
   // printf("finished reading vals, val target %lu \n", nb_paths_from_s[target_node]);
 
-  Graph dag = read_graph(dag_name, 1);
   //printf("DAG is:\n");
   //print_graph(&dag,1);
   uli nb_nodes_dag = count_nodes(&dag);
@@ -242,6 +250,15 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   // Sample Rank
 
   List* paths = (List*) malloc(nb_queries * sizeof(List));
+  if(paths == NULL){
+    printf("paths problem allocation \n");
+    exit(-1);
+  }
+  for(uli iii=0; iii < nb_queries;iii++){
+    paths[iii].head = NULL;
+    paths[iii].tail = NULL;
+
+  }
   struct timeval t1, t2;
   double elapsedTime;
   // start timer
@@ -269,7 +286,9 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   strcpy(res, first_part);  // Copy str1 into result
   strcat(res, "/");
   strcat(res, "queries_");
-  strcat(res, string_from_uli(nb_queries));
+  x = string_from_uli(nb_queries);
+  strcat(res, x);
+  free(x);
   strcat(res, ".txt");
   writeListToFile(paths, nb_queries, res);
 
@@ -277,13 +296,17 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
     freeList(paths[que].head);
   }
 
-  for(uli i = 0; i < nb_nodes; i++){
+  for(uli i = 0; i < nb_nodes_dag; i++){
     free(adj_list[i]);
   }
   free(adj_list);
   //printf("end preprocessing bef \n");
   free(node_count);
+  free(paths);
+  free(nb_paths_from_s);
+  free(dag.edges);
 
+  fclose(file);
   printf("end queries\n");
 }
 
@@ -341,8 +364,8 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   for(uli start_node = 0; start_node < nb_nodes; start_node ++){
     //printf("%lu ", start_node);
     res = bfs(start_node, adj_list, node_count, nb_nodes);
-    if(start_node%1000 == 0){
-      printf("cur %lu ,", start_node/1000);
+    if(start_node%2 == 0){
+      printf("cur %lu ,", start_node/2);
     }
 
 
@@ -384,6 +407,11 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
         res.g.edges = new_edges;
         free(ordered_array);
         free(node_count_dag);
+
+        for(uli zz = 0; zz < nb_nodes_dag; zz++){
+          free(adj_list_dag[zz]);
+        }
+
         free(adj_list_dag);
       }
     // Print the dag
@@ -505,6 +533,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   fprintf(ptr3, "%s ", x);
   free(x);
   fclose(ptr3);
+  fclose(ptr4);
 
   printf("end writing after loop bfs\n");
   // If want to start from specific node
