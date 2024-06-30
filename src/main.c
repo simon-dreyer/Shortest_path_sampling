@@ -56,14 +56,6 @@ char* get_first_part(const char *str, const char * which) {
 void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, char* first_part, char* which, gsl_rng * R){
   printf("start queries\n");
   char* x;
-  //uli tmp;
-  //int n = snprintf(NULL, 0, "%lu", tmp);
-  //char string_node[n+1];
-  //char string_queries[n+1];
-  /* memset(string_node, '\0', sizeof(string_node)); */
-  /* memset(string_queries, '\0', sizeof(string_queries)); */
-  /* n = snprintf(NULL, 0, "%lu", source_node); */
-  /* int c = snprintf(string_node, n+1, "%lu", source_node); */
   char nbpath_name[100];
   strcpy(nbpath_name, first_part);  // Copy str1 into result
   strcat(nbpath_name, "/nb_paths_");
@@ -114,28 +106,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
       //printf("nb paths from %lu\n", nb_paths_from_s[node]);
       node += 1;
   }
-  // printf("finished reading vals, val target %lu \n", nb_paths_from_s[target_node]);
 
-  //printf("DAG is:\n");
-  //print_graph(&dag,1);
-  // uli nb_nodes_dag = count_nodes(&dag);
-  // printf("nb nodes dag %lu \n",nb_nodes_dag);
-  // // printf("nb nodes dag: %lu \n", nb_nodes_dag);
-  // Couple_adj** adj_list;
-  // adj_list = (Couple_adj**) malloc(nb_nodes_dag * sizeof(Couple_adj*));
-  // for(uli i = 0; i < nb_nodes_dag; i++){
-  //   adj_list[i] = (Couple_adj*) malloc(nb_nodes_dag * sizeof(Couple_adj));
-  // }
-
-  // for(uli i = 0; i < nb_nodes_dag; i++){
-  //   for(uli j = 0; j < nb_nodes_dag; j++){
-  //     adj_list[i][j].v = 0;
-  //     adj_list[i][j].nb = 0;
-  //   }
-  // }
-  // uli* node_count;
-  // node_count = (uli*) malloc(nb_nodes_dag*sizeof(uli));
-  // memset(node_count, 0, nb_nodes_dag*sizeof(uli));
   Graph_rep rdag;
   if(strcmp(which,"alias-unrank") == 0){
     rdag = create_adjacency_list(&dag, "d", 0, 0, 1);
@@ -143,13 +114,6 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   else{
    rdag = create_adjacency_list(&dag, "d", 1, 0, 0); 
   }
-
-  /* for(uli i = 0; i < nb_nodes_dag; i++){ */
-  /*   for(uli j = 0; j < node_count[i]; j++){ */
-  /*     printf("in DAG %lu -> %lu\n",i,adj_list[i][j].v); */
-  /*   } */
-  /* } */
-  // Sample Rank
 
   List* paths = (List*) malloc(nb_queries * sizeof(List));
   if(paths == NULL){
@@ -184,6 +148,14 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   // compute and print the elapsed time in millisec
   elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
   elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+  char time_res[100];
+  strcpy(time_res, first_part);  // Copy str1 into result
+  strcat(time_res, "/");
+  strcat(time_res, "queries_time_");
+  x = string_from_uli(nb_queries);
+  strcat(time_res, x);
+  free(x);
+  strcat(time_res, ".txt");
   printf("%f ms.\n", elapsedTime);
 
   char res[100];
@@ -196,7 +168,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   strcat(res, x);
   free(x);
   strcat(res, ".txt");
-  writeListToFile(paths, nb_queries, res);
+  writeResults(paths, nb_queries, res, time_res, elapsedTime);
 
   for(uli que = 0; que < nb_queries; que++){
     freeList(paths[que].head);
@@ -215,10 +187,6 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
 
 void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
 
-  struct timeval t1, t2;
-  double elapsedTime;
-  // start timer
-  gettimeofday(&t1, NULL);
 
   BFS_ret  res;
   char* x;
@@ -243,9 +211,15 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   FILE* ptr4 = fopen(time_name,"w");
   FILE* ptr = NULL;
   FILE* ptr2 = NULL;
-
+  
   // Perform BFS from all nodes and store dags in a directory with the filename before dot
   for(uli start_node = 0; start_node < graph->nb_nodes; start_node ++){
+
+    struct timeval t1, t2;
+    long elapsedTime;
+    // start timer
+    gettimeofday(&t1, NULL);
+
     // printf("start node : %lu \n", start_node);
     // print_graph_rep(&A);
 
@@ -290,13 +264,17 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
       free_graph_rep(&rdag);
       // printf("////////////////////");
       // print_graph(&res.g,1);
+
     }
 
     // stop timer
     gettimeofday(&t2, NULL);
     // compute and print the elapsed time in millisec
-    elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-    elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+    elapsedTime = (t2.tv_sec-t1.tv_sec)*1000000 + t2.tv_usec-t1.tv_usec;
+
+    //elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+    //printf("elapsedTime %ld\n", elapsedTime);
+    //elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
 
 
     strcpy(dist_name, first_part);  // Copy str1 into result
@@ -345,7 +323,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     fprintf(ptr3, "%s\n", x);
     free(x);
 
-    fprintf(ptr4, "%f\n", elapsedTime);
+    fprintf(ptr4, "%ld\n", elapsedTime);
 
 
 

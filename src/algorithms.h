@@ -92,7 +92,7 @@ void addNode(List* li, uli data);
 void printList(Node* head);
 void freeList(Node* head);
 void reverseList(List* head);
-void writeListToFile(List* head, uli nb_elements, const char* filename);
+void writeResults(List* head, uli nb, const char* filename, const char* timename, double time);
 void initList(List* list);
 List BRW(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng * R);
 bool find(Dictionary* dict, uli key, uli* value);

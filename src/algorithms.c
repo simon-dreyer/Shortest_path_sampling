@@ -264,11 +264,16 @@ void reverseList(List* list) {
 }
 
 // Function to write the list to a file
-void writeListToFile(List* head, uli nb, const char* filename) {
+void writeResults(List* head, uli nb, const char* filename, const char* timename, double time) {
     FILE* file = fopen(filename, "w");
     if (file == NULL) {
         fprintf(stderr, "Error opening file %s for writing\n", filename);
         return;
+    }
+    FILE* file2 = fopen(timename, "w");
+    if (file2 == NULL) {
+      fprintf(stderr, "Error opening file %s for writing\n", timename);
+      return;
     }
     for(uli i = 0; i < nb; i ++){
       if(head[i].head != NULL){
@@ -280,8 +285,10 @@ void writeListToFile(List* head, uli nb, const char* filename) {
         fprintf(file, "%lu\n", temp->data); 
       }
     }
+    fprintf(file2, "%f", time);
 
     fclose(file);
+    fclose(file2);
 }
 
 Dictionary* createDictionary(uli size) {
