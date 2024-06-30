@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
-#include <gsl/gsl_rng.h>
 #include "algorithms.h"
 
 // In total the graph can not contain more than 4294967295 shortest paths since we use unsigned long int
@@ -52,122 +51,9 @@ char* get_first_part(const char *str, const char * which) {
   return result;
 }
 
-// not used and not up to date
-// uli dicho_label(uli v, Couple_adj** adj_list, uli* nb_count, uli nb_nodes, uli* nb_paths_from_s, uli r){
-//   uli i = 0;
-//   uli j = nb_count[v]-1;
-//   // printf("dicho i %lu j %lu\n",i,j);
-//   while(j - i + 1 > 1){
-//     uli x = (i+j - 1)/2;
-//     // printf("x %lu\n", x);
-//     Couple_adj y = adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
-//     //uli w = x.v;
-//     //uli nb = x.nb;
-//     if(y.nb > r){
-//       j = x;
-//     }
-//     else{
-//       i = x + 1;
-//     }
-//   }
-//   return j;
-
-// }
-
-Couple_pred find_pred_opti(uli v, Graph_rep* g, uli* nb_paths_from_s, uli r){
-  //uli i = dicho_label(v, adj_list, nb_count, nb_nodes, nb_paths_from_s,r);
-  // avoid function call dicho_label
-  uli i = 0;
-  uli j = g->node_count[v]-1;
-  // printf("dicho i %lu j %lu\n",i,j);
-  while(j - i + 1 > 1){
-    uli x = (i+j - 1)/2;
-    // printf("x %lu\n", x);
-    Couple_adj y = g->adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
-    //uli w = x.v;
-    //uli nb = x.nb;
-    if(y.nb > r){
-      j = x;
-    }
-    else{
-      i = x + 1;
-    }
-  }
-  i = j;
-  // end function call replacement
 
 
-
-  Couple_adj y = g->adj_list[v][i];  // *((adj_list+v*nb_nodes + i));
-  uli rp = r;
-  uli w = y.v;
-  if (i > 0){
-    Couple_adj z = g->adj_list[v][i-1]; // *((adj_list+v*nb_nodes + (i-1)));
-    //uli wp = z.v;
-    rp = r - z.nb;
-  }
-  Couple_pred res;
-  // printf("pred found %lu, %lu \n", w, rp);
-  res.v = w;
-  res.r = rp;
-  return res;
-}
-
-Couple_pred find_pred(uli v, Graph_rep* g, uli* nb_paths_from_s, uli r){
-  //printf("find pred start : v %lu r %lu\n",v,r);
-  uli i = 0;
-  Couple_adj z = g->adj_list[v][0]; // *((adj_list+v*nb_nodes));
-  uli w = z.v;
-  //printf("--------- val %lu \n", nb_paths_from_s[w]);
-  uli rp = r - nb_paths_from_s[w];
-  // printf("ici just first pred %lu %lu \n", w, rp);
-  while(rp < r){
-    i = i + 1;
-    //printf("look for pred iteration %lu : %lu %lu\n", i, w,rp);
-    z = g->adj_list[v][i];  // *((adj_list+v*nb_nodes) + i);
-    w = z.v;
-    rp = rp - nb_paths_from_s[w];
-    //printf("--------- val %lu \n", nb_paths_from_s[w]);
-  }
-  rp = rp + nb_paths_from_s[w];
-  Couple_pred y;
-  //printf("pred found %lu, %lu \n", w, rp);
-  y.v = w;
-  y.r = rp;
-  return y;
-}
-
-List build_rank_b(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, uli rank, char* which){
-  uli source_node, target_node;
-  find(g->id_rev, s, &source_node);
-  find(g->id_rev, t, &target_node);
-  // uli source_node = g->id_rev[s];
-  // uli target_node = g->id_rev[t];
-
-  List path;
-  initList(&path);
-
-  uli r = rank;
-  uli v = target_node;
-  Couple_pred x;
-  while(v != source_node){
-    //printf("new iteration while current v %lu\n",v);
-    addNode(&path, g->ids[v]);
-    if (strcmp(which,"i-unrank") == 0){
-      x = find_pred_opti(v, g, nb_paths_from_s, r); 
-    }
-    else{
-      x = find_pred(v, g, nb_paths_from_s, r);
-    }
-    r = x.r;
-    v = x.v;
-    //  printf("couple result node %lu new rank %lu\n",v,r);
-  }
-  addNode(&path, g->ids[v]);
-  return path;
-}
-
-void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, char* first_part, char* which){
+void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, char* first_part, char* which, gsl_rng * R){
   printf("start queries\n");
   char* x;
   //uli tmp;
@@ -193,7 +79,14 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   strcat(dag_name, x);
   free(x);
   strcat(dag_name, ".edges");
-  Graph dag = read_graph(dag_name, 1);
+  Graph dag;
+  if(strcmp(which,"alias-unrank") == 0){
+    dag = read_graph(dag_name, 0, 1);
+  }
+  else{
+    dag = read_graph(dag_name, 1, 0);
+  }
+
 
   // printf("nbpath_name : %s \n", nbpath_name);
   char line[256];
@@ -243,7 +136,13 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   // uli* node_count;
   // node_count = (uli*) malloc(nb_nodes_dag*sizeof(uli));
   // memset(node_count, 0, nb_nodes_dag*sizeof(uli));
-  Graph_rep rdag = create_adjacency_list(&dag, "d", 1);
+  Graph_rep rdag;
+  if(strcmp(which,"alias-unrank") == 0){
+    rdag = create_adjacency_list(&dag, "d", 0, 0, 1);
+  }
+  else{
+   rdag = create_adjacency_list(&dag, "d", 1, 0, 0); 
+  }
 
   /* for(uli i = 0; i < nb_nodes_dag; i++){ */
   /*   for(uli j = 0; j < node_count[i]; j++){ */
@@ -262,16 +161,20 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
     paths[iii].tail = NULL;
 
   }
+  //print_graph_rep(&rdag);
+
   struct timeval t1, t2;
   double elapsedTime;
   // start timer
   gettimeofday(&t1, NULL);
 
   for(uli que = 0; que < nb_queries; que++){
-    uli rank = gsl_rng_uniform_int(R, nb_paths_from_s[target_node]);
-    //printf("******************** query %lu rank sampled : %lu from a total of %lu \n", que, rank, nb_paths_from_s[target_node]);
+    paths[que] = BRW(&rdag, nb_paths_from_s, source_node, target_node, which, R);
+    //unrank uncomment bellow
+    /* uli rank = gsl_rng_uniform_int(R, nb_paths_from_s[target_node]); */
+    /* //printf("******************** query %lu rank sampled : %lu from a total of %lu \n", que, rank, nb_paths_from_s[target_node]); */
 
-    paths[que] = build_rank_b(&rdag, nb_paths_from_s, source_node, target_node, rank, which);
+    /* paths[que] = build_rank_b(&rdag, nb_paths_from_s, source_node, target_node, rank, which); */
     //printf("sampled path : \n");
     //reverseList(&paths[que]);
     //printList(paths[que].head);
@@ -319,34 +222,14 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
 
   BFS_ret  res;
   char* x;
-  //Couple_adj adj_list[nb_nodes][nb_nodes];
-  // Couple_adj** adj_list;
-  // adj_list = (Couple_adj**) malloc(nb_nodes * sizeof(Couple_adj*));
-  // for(uli i = 0; i < nb_nodes; i++){
-  //   adj_list[i] = (Couple_adj*) malloc(nb_nodes * sizeof(Couple_adj));
-  // }
 
-  // for(uli i = 0; i < nb_nodes; i++){
-  //   for(uli j = 0; j < nb_nodes; j++){
-  //     adj_list[i][j].v = 0;
-  //     adj_list[i][j].nb = 0;
-  //   }
-  // }
-  // uli* node_count;
-  // node_count = (uli*) malloc(nb_nodes*sizeof(uli));
-  // memset(node_count, 0, nb_nodes*sizeof(node_count));
-  // create_adjacency_list(graph, adj_list, node_count, nb_nodes, directed, 0);
-
-  Graph_rep A = create_adjacency_list(graph, directed, 0);
+  Graph_rep A = create_adjacency_list(graph, directed, 0, 0, 0);
   // print_graph_rep(&A);
 
   char dist_name[100];
   char nb_path_name[100];
   char tot_path_name[100];
   char time_name[100];
-  /* int n = snprintf(NULL, 0, "%lu", tmp); */
-  /* char buf[n+1]; */
-  /* char string_node[n+1]; */
   uli total = 0;
   strcpy(tot_path_name, first_part);  // Copy str1 into result
   strcat(tot_path_name, "/");   // Add slash
@@ -363,7 +246,9 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
 
   // Perform BFS from all nodes and store dags in a directory with the filename before dot
   for(uli start_node = 0; start_node < graph->nb_nodes; start_node ++){
-    //printf("%lu ", start_node);
+    // printf("start node : %lu \n", start_node);
+    // print_graph_rep(&A);
+
     res = bfs(start_node, &A);
     if(start_node%1000 == 0){
       printf("cur %lu ,", start_node/1000);
@@ -376,52 +261,36 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
       }
     if(strcmp(which,"ob-unrank") == 0)
       {
-    //     //adj list for dag
-    //     uli nb_nodes_dag = count_nodes(&res.g);
-    //     HashSet* h = nodes(&res.g);
-    //     uli* nodes_dag = (uli*) malloc(nb_nodes_dag*sizeof(uli));
-    //     uli zz = 0;
-    //     for (uli i = 0; i < h->size; ++i) {
-    //     Node* current = h->table[i];
-    //     while (current != NULL) {
-    //         //printf("%lu\n", current->data);
-    //         nodes_dag[zz] = current->data;
-    //         current = current->next;
-    //     }
-    // }
-
-
-    //     Couple_adj** adj_list_dag;
-    //     adj_list_dag = (Couple_adj**) malloc(nb_nodes_dag * sizeof(Couple_adj*));
-    //     for(uli z = 0; z < nb_nodes_dag; z++){
-    //       adj_list_dag[z] = (Couple_adj*) malloc(nb_nodes_dag * sizeof(Couple_adj));
-    //     }
-
-    //     for(uli z = 0; z < nb_nodes_dag; z++){
-    //       for(uli y = 0; y < nb_nodes_dag; y++){
-    //         adj_list_dag[z][y].v = 0;
-    //         adj_list_dag[z][y].nb = 0;
-    //       }
-    //     }
-    //     uli* node_count_dag;
-    //     node_count_dag = (uli*) malloc(nb_nodes_dag*sizeof(uli));
-    //     memset(node_count_dag, 0, nb_nodes_dag*sizeof(node_count_dag));
-    //     //printf("directed : %s\n", directed);
-    //     create_adjacency_list(&res.g, adj_list_dag, node_count_dag, nb_nodes_dag, "d", 0);
-    //     //end adj list for dag
 
         Couple_pred* ordered_array = (Couple_pred*) malloc(sizeof(Couple_pred)*res.g.nb_nodes);
         for(uli ii=0;ii<res.g.nb_nodes;ii++){
           ordered_array[ii].v = ii;
           ordered_array[ii].r = res.paths[ii];
         }
-        Graph_rep rdag = create_adjacency_list(&res.g, "d", 0);
+        Graph_rep rdag = create_adjacency_list(&res.g, "d", 0, 0, 0);
         Edge* new_edges = optimal_bunrank_order(res.g.edge_count,  ordered_array, &rdag);
         free(res.g.edges);
         res.g.edges = new_edges;
         free(ordered_array);
         free_graph_rep(&rdag);
       }
+    if(strcmp(which,"alias-unrank") == 0){
+      // the last 1 is for create aliases since they do not exist yet
+      //printf("create adj for alias\n");
+      res.g.is_alias = 1;
+      // printf("***************");
+      // print_graph(&res.g,1);
+      Graph_rep rdag = create_adjacency_list(&res.g, "d", 1, 1, 0);
+      //printf("end create adj for alias\n");
+      //print_graph_rep(&rdag);
+      //then we need to modify &res.g to add aliases and prob to it, and then in queries we call create_adj with the last param at 0
+      // printf("//////*************///////");
+      // print_graph(&res.g,1);
+      add_alias_prob_to_graph(&res.g, &rdag);
+      free_graph_rep(&rdag);
+      // printf("////////////////////");
+      // print_graph(&res.g,1);
+    }
 
     // stop timer
     gettimeofday(&t2, NULL);
@@ -452,7 +321,6 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
 
     // Print distances
     for(uli i = 0; i < graph->nb_nodes; i++){
-      
       x = string_from_uli(res.dist[i]);
       fprintf(ptr, "%s\n", x);
       free(x);
@@ -497,7 +365,12 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     free(x);
     strcat(result,".edges");  // Concatenate str3 to result
     //printf("edge file: %s\n",result);
-    write_graph(result, &res.g);
+    if(strcmp(which,"alias-unrank") == 0){
+      write_graph(result, &res.g, 1);
+    }
+    else{
+      write_graph(result, &res.g, 0);
+    }
 
     fclose(ptr);
     fclose(ptr2);
@@ -544,12 +417,12 @@ int main(int argc, char *argv[]) {
   //char* source = argv[4];
   //char* target = argv[5];
 
-  if(! (strcmp(which, "b-unrank") == 0 || strcmp(which, "ob-unrank") == 0 || strcmp(which, "i-unrank") == 0) ){
+  if(! (strcmp(which, "b-unrank") == 0 || strcmp(which, "ob-unrank") == 0 || strcmp(which, "i-unrank") == 0 || strcmp(which, "alias-unrank") == 0) ){
     printf("problem with algorithm for preprocessing not implemented \n");
     return EXIT_FAILURE;
   }
 
-  graph = read_graph(argv[1], 0);
+  graph = read_graph(argv[1], 0, 0);
   if (graph.edges == NULL) {
     return EXIT_FAILURE;
   }
@@ -591,7 +464,7 @@ int main(int argc, char *argv[]) {
   uli target_node = strtoul(argv[5],NULL,10);
   uli nb_que = strtoul(argv[6],NULL,10);
 
-  queries(&graph, source_node, target_node, nb_que, first_part, which);
+  queries(&graph, source_node, target_node, nb_que, first_part, which, R);
   
 
   // Free allocated memory
