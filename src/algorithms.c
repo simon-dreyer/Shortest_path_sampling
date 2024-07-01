@@ -264,7 +264,7 @@ void reverseList(List* list) {
 }
 
 // Function to write the list to a file
-void writeResults(List* head, uli nb, const char* filename, const char* timename, double time) {
+void writeResults(List* head, uli nb, const char* filename, const char* timename, const char* operationname, double time, uli nb_operations, char* time_or_operations) {
     FILE* file = fopen(filename, "w");
     if (file == NULL) {
         fprintf(stderr, "Error opening file %s for writing\n", filename);
@@ -275,6 +275,12 @@ void writeResults(List* head, uli nb, const char* filename, const char* timename
       fprintf(stderr, "Error opening file %s for writing\n", timename);
       return;
     }
+    FILE* file3 = fopen(operationname, "w");
+    if (file3 == NULL) {
+      fprintf(stderr, "Error opening file %s for writing\n", operationname);
+      return;
+    }
+    if(strcmp(time_or_operations,"t") == 0){
     for(uli i = 0; i < nb; i ++){
       if(head[i].head != NULL){
         Node* temp = head[i].head;
@@ -285,7 +291,9 @@ void writeResults(List* head, uli nb, const char* filename, const char* timename
         fprintf(file, "%lu\n", temp->data); 
       }
     }
+    }
     fprintf(file2, "%f", time);
+    fprintf(file3, "%lu", nb_operations);
 
     fclose(file);
     fclose(file2);
@@ -912,6 +920,26 @@ uli sample(uli* alias, double* prob, uli n, gsl_rng * R) {
     }
 }
 
+Pred_op sample_op(uli* alias, double* prob, uli n, gsl_rng * R) {
+  Pred_op x;
+  x.op = 0;
+
+  uli column = gsl_rng_uniform_int(R, n);
+  x.op ++;
+
+  double p = (double)rand() / RAND_MAX;
+  x.op += 2;
+
+  x.op ++;
+  if (p < prob[column]) {
+    x.v = column;
+    return x;
+  } else {
+    x.v = alias[column];
+    return x;
+  }
+}
+
 ///////////////////////// Unranking functions ////////////////////////////
 
 // not used and not up to date
@@ -1036,6 +1064,17 @@ uli rand_pred_alias(uli v, Graph_rep* g, gsl_rng * R){
   return g->adj_list[v][i].v;
 }
 
+Pred_op rand_pred_alias_op(uli v, Graph_rep* g, gsl_rng * R){
+  Pred_op x;
+  x.op = 0;
+
+  Pred_op zz = sample_op(g->alias[v], g->prob[v], g->node_count[v], R);
+  uli i = zz.v;
+  x.op += zz.op;
+  x.v = g->adj_list[v][i].v;
+  return x;
+}
+
 
 uli rand_pred(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
   uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
@@ -1055,6 +1094,33 @@ uli rand_pred(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
     //printf("--------- val %lu \n", nb_paths_from_s[w]);
   }
   return w;
+}
+
+Pred_op rand_pred_op(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
+  Pred_op x;
+  x.op = 0;
+
+  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
+  x.op++;
+
+  uli i = 0;
+  Couple_adj z = g->adj_list[v][0]; // *((adj_list+v*nb_nodes));
+  uli w = z.v;
+  uli rp = r - nb_paths_from_s[w];
+  x.op += 4;
+
+  while(rp < r){
+    i = i + 1;
+    x.op += 2;
+
+    z = g->adj_list[v][i];  // *((adj_list+v*nb_nodes) + i);
+    w = z.v;
+    rp = rp - nb_paths_from_s[w];
+    x.op += 3;
+
+  }
+  x.v = w;
+  return x;
 }
 
 uli rand_pred_opti(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
@@ -1091,6 +1157,45 @@ uli rand_pred_opti(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
   return w;
 }
 
+Pred_op rand_pred_opti_op(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
+  Pred_op xx;
+  xx.op = 0;
+
+  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
+  uli i = 0;
+  uli j = g->node_count[v]-1;
+  xx.op = xx.op + 3;
+
+  while(j - i + 1 > 1){
+    uli x = (i+j - 1)/2;
+    xx.op = xx.op + 4;
+
+    Couple_adj y = g->adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
+    xx.op++;
+
+    if(y.nb > r){
+      j = x;
+    }
+    else{
+      i = x + 1;
+    }
+    xx.op = xx.op + 2;
+  }
+  i = j;
+
+  Couple_adj y = g->adj_list[v][i];  // *((adj_list+v*nb_nodes + i));
+  uli w = y.v;
+  xx.op ++;
+
+  if (i > 0){
+    Couple_adj z = g->adj_list[v][i-1]; // *((adj_list+v*nb_nodes + (i-1)));
+    w = z.v;
+    xx.op += 2;
+  }
+  xx.v = w;
+  return xx;
+}
+
 List BRW(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng * R){
   uli source_node, target_node;
   find(g->id_rev, s, &source_node);
@@ -1118,4 +1223,53 @@ List BRW(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng 
   }
   addNode(&path, g->ids[v]);
   return path;
+}
+
+uli BRW_op(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng * R){
+  uli source_node, target_node;
+  Count_op res;
+  res.op = 0;
+
+  //List path;
+  find(g->id_rev, s, &source_node);
+  find(g->id_rev, t, &target_node);
+  res.op += 2;
+  // uli source_node = g->id_rev[s];
+  // uli target_node = g->id_rev[t];
+
+
+  //initList(&res.path);
+
+  Pred_op x;
+  x.op = 0;
+
+  uli v = target_node;
+  res.op ++;
+
+  while(v != source_node){
+    res.op ++;
+    //printf("new iteration while current v %lu\n",v);
+    //addNode(&path, g->ids[v]);
+    res.op += 4;
+
+    if (strcmp(which,"i-unrank") == 0){
+      x = rand_pred_opti_op(v, g, nb_paths_from_s, R);
+      v = x.v;
+      res.op += x.op;
+    }
+    else if (strcmp(which,"alias-unrank") == 0){
+      x = rand_pred_alias_op(v, g, R);
+      v = x.v;
+      res.op += x.op;
+    }
+    else{
+      x = rand_pred_op(v, g, nb_paths_from_s, R);
+      v = x.v;
+      res.op += x.op;
+    }
+    //  printf("couple result node %lu \n",v);
+  }
+  //addNode(&path, g->ids[v]);
+  res.op += 4;
+  return res.op;
 }

@@ -53,7 +53,7 @@ char* get_first_part(const char *str, const char * which) {
 
 
 
-void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, char* first_part, char* which, gsl_rng * R){
+void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, char* first_part, char* which, gsl_rng * R, char* time_or_operations){
   printf("start queries\n");
   char* x;
   char nbpath_name[100];
@@ -129,19 +129,37 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
 
   struct timeval t1, t2;
   double elapsedTime;
+  uli nb_operations = 0;
+  uli nb_operations_tmp = 0;
   // start timer
   gettimeofday(&t1, NULL);
 
-  for(uli que = 0; que < nb_queries; que++){
-    paths[que] = BRW(&rdag, nb_paths_from_s, source_node, target_node, which, R);
-    //unrank uncomment bellow
-    /* uli rank = gsl_rng_uniform_int(R, nb_paths_from_s[target_node]); */
-    /* //printf("******************** query %lu rank sampled : %lu from a total of %lu \n", que, rank, nb_paths_from_s[target_node]); */
+  printf("******************************\n");
 
-    /* paths[que] = build_rank_b(&rdag, nb_paths_from_s, source_node, target_node, rank, which); */
-    //printf("sampled path : \n");
-    //reverseList(&paths[que]);
-    //printList(paths[que].head);
+  if(strcmp(time_or_operations,"t") == 0){
+    printf("count time not operations\n");
+    for(uli que = 0; que < nb_queries; que++){
+      paths[que] = BRW(&rdag, nb_paths_from_s, source_node, target_node, which, R);
+      //unrank uncomment bellow
+      /* uli rank = gsl_rng_uniform_int(R, nb_paths_from_s[target_node]); */
+      /* //printf("******************** query %lu rank sampled : %lu from a total of %lu \n", que, rank, nb_paths_from_s[target_node]); */
+
+      /* paths[que] = build_rank_b(&rdag, nb_paths_from_s, source_node, target_node, rank, which); */
+      //printf("sampled path : \n");
+      //reverseList(&paths[que]);
+      //printList(paths[que].head);
+    } 
+  }
+  else if(strcmp(time_or_operations,"c") == 0){
+    printf("count operations not time\n");
+    for(uli que = 0; que < nb_queries; que++){
+    nb_operations_tmp = BRW_op(&rdag, nb_paths_from_s, source_node, target_node, which, R);
+    nb_operations += nb_operations_tmp;
+    }
+  }
+  else{
+    printf("option for complexity not implemented\n");
+    exit(-1);
   }
   // stop timer
   gettimeofday(&t2, NULL);
@@ -149,14 +167,23 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
   elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
   char time_res[100];
+  char operation_res[100];
   strcpy(time_res, first_part);  // Copy str1 into result
   strcat(time_res, "/");
   strcat(time_res, "queries_time_");
   x = string_from_uli(nb_queries);
   strcat(time_res, x);
   free(x);
+  strcpy(operation_res, first_part);  // Copy str1 into result
+  strcat(operation_res, "/");
+  strcat(operation_res, "queries_operations_");
+  x = string_from_uli(nb_queries);
+  strcat(operation_res, x);
+  free(x);
   strcat(time_res, ".txt");
+  strcat(operation_res, ".txt");
   printf("%f ms.\n", elapsedTime);
+  printf("%lu operations.\n", nb_operations);
 
   char res[100];
   /* n = snprintf(NULL, 0, "%lu", nb_queries); */
@@ -168,7 +195,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   strcat(res, x);
   free(x);
   strcat(res, ".txt");
-  writeResults(paths, nb_queries, res, time_res, elapsedTime);
+  writeResults(paths, nb_queries, res, time_res, operation_res, elapsedTime, nb_operations, time_or_operations);
 
   for(uli que = 0; que < nb_queries; que++){
     freeList(paths[que].head);
@@ -442,8 +469,9 @@ int main(int argc, char *argv[]) {
   uli target_node = strtoul(argv[5],NULL,10);
   uli nb_que = strtoul(argv[6],NULL,10);
 
-  queries(&graph, source_node, target_node, nb_que, first_part, which, R);
-  
+  char* time_or_operations = argv[7];
+
+  queries(&graph, source_node, target_node, nb_que, first_part, which, R, time_or_operations);
 
   // Free allocated memory
   free(graph.edges);

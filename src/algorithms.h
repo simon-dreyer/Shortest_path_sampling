@@ -77,6 +77,16 @@ typedef struct Graph_rep{
   uli nb_nodes;
 } Graph_rep;
 
+typedef struct Count_op{
+  List path;
+  uli op;
+} Count_op;
+
+typedef struct Pred_op{
+  uli v;
+  uli op;
+} Pred_op;
+
 
 Graph read_graph(const char *filename, int is_weighted, int is_alias);
 uli count_nodes(Edge* edges, uli nb);
@@ -92,9 +102,11 @@ void addNode(List* li, uli data);
 void printList(Node* head);
 void freeList(Node* head);
 void reverseList(List* head);
-void writeResults(List* head, uli nb, const char* filename, const char* timename, double time);
+void writeResults(List* head, uli nb, const char* filename, const char* timename, const char* operationname, double time, uli nb_operations, char* time_or_operations);
 void initList(List* list);
 List BRW(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng * R);
+uli BRW_op(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng * R);
+
 bool find(Dictionary* dict, uli key, uli* value);
 void add_alias_prob_to_graph(Graph * g, Graph_rep* a);
 void create_alias_tables(double* probabilities, uli n, uli* alias, double* prob);
