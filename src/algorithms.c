@@ -928,7 +928,7 @@ Pred_op sample_op(uli* alias, double* prob, uli n, gsl_rng * R) {
   x.op ++;
 
   double p = (double)rand() / RAND_MAX;
-  x.op += 2;
+  x.op += 3;
 
   x.op ++;
   if (p < prob[column]) {
@@ -1101,22 +1101,22 @@ Pred_op rand_pred_op(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
   x.op = 0;
 
   uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
-  x.op++;
+  x.op += 2;
 
   uli i = 0;
   Couple_adj z = g->adj_list[v][0]; // *((adj_list+v*nb_nodes));
   uli w = z.v;
   uli rp = r - nb_paths_from_s[w];
-  x.op += 4;
+  x.op += 5;
 
   while(rp < r){
     i = i + 1;
-    x.op += 2;
+    x.op += 3;
 
     z = g->adj_list[v][i];  // *((adj_list+v*nb_nodes) + i);
     w = z.v;
     rp = rp - nb_paths_from_s[w];
-    x.op += 3;
+    x.op += 4;
 
   }
   x.v = w;
@@ -1164,22 +1164,24 @@ Pred_op rand_pred_opti_op(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R
   uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
   uli i = 0;
   uli j = g->node_count[v]-1;
-  xx.op = xx.op + 3;
+  xx.op = xx.op + 4;
 
   while(j - i + 1 > 1){
     uli x = (i+j - 1)/2;
-    xx.op = xx.op + 4;
+    xx.op = xx.op + 7;
 
     Couple_adj y = g->adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
     xx.op++;
 
     if(y.nb > r){
       j = x;
+      xx.op = xx.op + 1;
     }
     else{
       i = x + 1;
+      xx.op = xx.op + 2;
     }
-    xx.op = xx.op + 2;
+    xx.op = xx.op + 1;
   }
   i = j;
 
