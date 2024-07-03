@@ -125,7 +125,6 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
     paths[iii].tail = NULL;
 
   }
-  print_graph_rep(&rdag);
 
   /* Graph_rep org = create_adjacency_list(graph, "d", 0, 0, 0); */
   /* print_graph_rep(&org); */
@@ -223,7 +222,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
 
   Graph_rep A = create_adjacency_list(graph, directed, 0, 0, 0);
   puts("graphe principale print repr");
-  print_graph_rep(&A);
+  //print_graph_rep(&A);
 
   char dist_name[100];
   char nb_path_name[100];

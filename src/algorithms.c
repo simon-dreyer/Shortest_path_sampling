@@ -1100,10 +1100,10 @@ uli rand_pred(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
 }
 
 Pred_op rand_pred_op(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
-  printf("rand pre_op v %lu, other id %lu\n",v, g->ids[v]);
+  //printf("rand pre_op v %lu, other id %lu\n",v, g->ids[v]);
   Pred_op x;
   x.op = 0;
-  printf("rand pred_op gsl from 0 to %lu\n", nb_paths_from_s[g->ids[v]]);
+  //printf("rand pred_op gsl from 0 to %lu\n", nb_paths_from_s[g->ids[v]]);
   uli r = gsl_rng_uniform_int(R, nb_paths_from_s[g->ids[v]]);
   x.op += 2;
 
