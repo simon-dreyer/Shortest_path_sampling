@@ -848,8 +848,8 @@ Edge * optimal_bunrank_order(uli edge_count, Couple_pred* nb_paths_from_s, Graph
   uli ii = 0;
   for(uli i = 0; i < A->nb_nodes; i++){
     for(uli j = 0; j < A->node_count[nb_paths_from_s[i].v]; j++){
-      new_edges[ii].src = nb_paths_from_s[i].v;
-      new_edges[ii].dest = A->adj_list[nb_paths_from_s[i].v][j].v;
+      new_edges[ii].src = A->ids[nb_paths_from_s[i].v];
+      new_edges[ii].dest = A->ids[A->adj_list[nb_paths_from_s[i].v][j].v];
       new_edges[ii].nb = nb_paths_from_s[i].r;
       ii++;
     }
@@ -912,6 +912,7 @@ void create_alias_tables(double* probabilities, uli n, uli* alias, double* prob)
 
 // Function to generate a sample
 uli sample(uli* alias, double* prob, uli n, gsl_rng * R) {
+  //printf("sample gsl from 0 to %lu\n", n);
   uli column = gsl_rng_uniform_int(R, n);
     double p = (double)rand() / RAND_MAX;
     if (p < prob[column]) {
@@ -924,7 +925,7 @@ uli sample(uli* alias, double* prob, uli n, gsl_rng * R) {
 Pred_op sample_op(uli* alias, double* prob, uli n, gsl_rng * R) {
   Pred_op x;
   x.op = 0;
-
+  //printf("sample gsl from 0 to %lu\n", n);
   uli column = gsl_rng_uniform_int(R, n);
   x.op ++;
 
@@ -1078,7 +1079,8 @@ Pred_op rand_pred_alias_op(uli v, Graph_rep* g, gsl_rng * R){
 
 
 uli rand_pred(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
-  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
+  //printf("rand pred gsl from 0 to %lu\n", nb_paths_from_s[v]);
+  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[g->ids[v]]);
   //printf("find pred start : v %lu r %lu\n",v,r);
   uli i = 0;
   Couple_adj z = g->adj_list[v][0]; // *((adj_list+v*nb_nodes));
@@ -1098,10 +1100,11 @@ uli rand_pred(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
 }
 
 Pred_op rand_pred_op(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
+  printf("rand pre_op v %lu, other id %lu\n",v, g->ids[v]);
   Pred_op x;
   x.op = 0;
-
-  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
+  printf("rand pred_op gsl from 0 to %lu\n", nb_paths_from_s[g->ids[v]]);
+  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[g->ids[v]]);
   x.op += 2;
 
   uli i = 0;
@@ -1127,7 +1130,8 @@ Pred_op rand_pred_op(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
 uli rand_pred_opti(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
   //uli i = dicho_label(v, adj_list, nb_count, nb_nodes, nb_paths_from_s,r);
   // avoid function call dicho_label
-  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
+  //printf("rand pred opti gsl from 0 to %lu\n", nb_paths_from_s[v]);
+  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[g->ids[v]]);
   uli i = 0;
   uli j = g->node_count[v]-1;
   // printf("dicho i %lu j %lu\n",i,j);
@@ -1161,8 +1165,8 @@ uli rand_pred_opti(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
 Pred_op rand_pred_opti_op(uli v, Graph_rep* g, uli* nb_paths_from_s, gsl_rng * R){
   Pred_op xx;
   xx.op = 0;
-
-  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[v]);
+  //printf("rand pred opti op gsl from 0 to %lu\n", nb_paths_from_s[v]);
+  uli r = gsl_rng_uniform_int(R, nb_paths_from_s[g->ids[v]]);
   uli i = 0;
   uli j = g->node_count[v]-1;
   xx.op = xx.op + 4;

@@ -125,8 +125,11 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
     paths[iii].tail = NULL;
 
   }
-  //print_graph_rep(&rdag);
+  print_graph_rep(&rdag);
 
+  /* Graph_rep org = create_adjacency_list(graph, "d", 0, 0, 0); */
+  /* print_graph_rep(&org); */
+  printf("salut\n");
   struct timeval t1, t2;
   double elapsedTime;
   uli nb_operations = 0;
@@ -219,7 +222,8 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   char* x;
 
   Graph_rep A = create_adjacency_list(graph, directed, 0, 0, 0);
-  // print_graph_rep(&A);
+  puts("graphe principale print repr");
+  print_graph_rep(&A);
 
   char dist_name[100];
   char nb_path_name[100];
@@ -255,6 +259,10 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
       printf("cur %lu ,", start_node/1000);
     }
 
+    printf("START NODE %lu\n",start_node);
+    print_graph(&res.g,1);
+    puts("end pring graph");
+
 
     if(strcmp(which,"i-unrank") == 0)
       {
@@ -269,6 +277,8 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
           ordered_array[ii].r = res.paths[ii];
         }
         Graph_rep rdag = create_adjacency_list(&res.g, "d", 0, 0, 0);
+        puts("in OBBBBBBBBBBBBBBBBBB");
+        print_graph_rep(&rdag);
         Edge* new_edges = optimal_bunrank_order(res.g.edge_count,  ordered_array, &rdag);
         free(res.g.edges);
         res.g.edges = new_edges;
@@ -371,7 +381,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     strcat(result,".edges");  // Concatenate str3 to result
     //printf("edge file: %s\n",result);
     if(strcmp(which,"alias-unrank") == 0){
-      write_graph(result, &res.g, 1);
+      write_graph(result, &res.g,1);
     }
     else{
       write_graph(result, &res.g, 0);
