@@ -258,9 +258,9 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
       printf("cur %lu ,", start_node/1000);
     }
 
-    printf("START NODE %lu\n",start_node);
-    print_graph(&res.g,1);
-    puts("end pring graph");
+    //printf("START NODE %lu\n",start_node);
+    //print_graph(&res.g,1);
+    //puts("end pring graph");
 
 
     if(strcmp(which,"i-unrank") == 0)
@@ -276,8 +276,8 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
           ordered_array[ii].r = res.paths[ii];
         }
         Graph_rep rdag = create_adjacency_list(&res.g, "d", 0, 0, 0);
-        puts("in OBBBBBBBBBBBBBBBBBB");
-        print_graph_rep(&rdag);
+        //puts("in OBBBBBBBBBBBBBBBBBB");
+        //print_graph_rep(&rdag);
         Edge* new_edges = optimal_bunrank_order(res.g.edge_count,  ordered_array, &rdag);
         free(res.g.edges);
         res.g.edges = new_edges;
