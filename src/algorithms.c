@@ -297,6 +297,7 @@ void writeResults(List* head, uli nb, const char* filename, const char* timename
 
     fclose(file);
     fclose(file2);
+    fclose(file3);
 }
 
 Dictionary* createDictionary(uli size) {

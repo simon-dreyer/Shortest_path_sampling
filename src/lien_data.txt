@@ -3,3 +3,7 @@
 - http://konect.cc/networks/livemocha/
 - http://konect.cc/networks/ca-AstroPh/
 - http://konect.cc/networks/slashdot-threads/
+- http://konect.cc/networks/opsahl-powergrid/
+- http://konect.cc/networks/petster-hamster/
+- http://konect.cc/networks/petster-hamster/
+- http://konect.cc/networks/opsahl-powergrid/
