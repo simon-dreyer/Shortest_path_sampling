@@ -114,6 +114,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   else{
    rdag = create_adjacency_list(&dag, "d", 1, 0, 0); 
   }
+  //print_graph_rep(&rdag);
 
   List* paths = (List*) malloc(nb_queries * sizeof(List));
   if(paths == NULL){
