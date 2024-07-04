@@ -37,7 +37,7 @@ def read_dic(s):
 # In[66]:
 
 
-l = [["milan", "d"],["astro_ph","u"], ["power_grid", "u"], ["hamster_full","u"], ["linux_mail","d"], ["slashdot", "d"], ["vienna","d"], ["paris","d"] ]
+l = [["astro_ph","u"], ["power_grid", "u"], ["hamster_full","u"], ["linux_mail","d"], ["slashdot", "d"], ["milan", "d"], ["vienna","d"], ["paris","d"] ]
 #l = [["power_grid", "u"], ["hamster_full","u"], ["aachen", "d"]]
 
 
@@ -78,7 +78,7 @@ for x in l:
 info
 
 
-# In[88]:
+# In[46]:
 
 
 import random
@@ -155,7 +155,7 @@ def calculate_mean_and_std(array):
     return mean, std_dev
 
 
-# In[89]:
+# In[47]:
 
 
 def read_integers_from_file(file_path):
