@@ -155,6 +155,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   else if(strcmp(time_or_operations,"c") == 0){
     printf("count operations not time\n");
     for(uli que = 0; que < nb_queries; que++){
+    printf("%ld ", que);
     nb_operations_tmp = BRW_op(&rdag, nb_paths_from_s, source_node, target_node, which, R);
     nb_operations += nb_operations_tmp;
     }
