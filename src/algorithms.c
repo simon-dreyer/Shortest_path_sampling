@@ -1254,6 +1254,7 @@ uli BRW_op(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rn
   res.op ++;
 
   while(v != source_node){
+    printf("v:%lu, ", v);
     res.op ++;
     //printf("new iteration while current v %lu\n",v);
     //addNode(&path, g->ids[v]);
