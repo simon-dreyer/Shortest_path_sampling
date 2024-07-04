@@ -82,16 +82,18 @@ info
 
 
 import random
-def random_pairs(n, infos, x, max_tries = 1000, more_than_one = 0):
+def random_pairs(n, infos, x, max_tries_per_node = 1000, more_than_one = 0):
     nb = 0
     res = []
     while nb < n:
+        print("nb", nb, end = " ")
         j = random.randint(0, infos[x[0]][0]-1)
         file_path = folder_path + "/" + x[0] + "_b-unrank/nb_paths_" + str(j) + ".csv"
         file_path2 = folder_path + "/" + x[0] + "_b-unrank/distances_" + str(j) + ".csv"
         ll = read_integers_from_file(file_path)
         ll2 = read_integers_from_file(file_path2)
-        while True:
+        tent = 0
+        while tent < max_tries_per_node:
             k = random.randint(0, infos[x[0]][0]-1)
             #print("len ll ", len(ll), "k", k)
             if ll[k] != 0 and k!=j:
@@ -100,8 +102,10 @@ def random_pairs(n, infos, x, max_tries = 1000, more_than_one = 0):
                         break
                 else:
                     break
-        res.append([[j,k], ll2[k], ll[k]])
-        nb += 1
+            tent += 1
+        if tent < max_tries_per_node:
+            res.append([[j,k], ll2[k], ll[k]])
+            nb += 1
     return res
             
 def random_pairs_exact(n, V):
