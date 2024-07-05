@@ -72,7 +72,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   free(x);
   strcat(dag_name, ".edges");
   Graph dag;
-  if(strcmp(which,"alias-unrank") == 0){
+  if(strcmp(which,"alias") == 0){
     dag = read_graph(dag_name, 0, 1);
   }
   else{
@@ -108,7 +108,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   }
 
   Graph_rep rdag;
-  if(strcmp(which,"alias-unrank") == 0){
+  if(strcmp(which,"alias") == 0){
     rdag = create_adjacency_list(&dag, "d", 0, 0, 1);
   }
   else{
@@ -264,11 +264,11 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     //puts("end pring graph");
 
 
-    if(strcmp(which,"i-unrank") == 0)
+    if(strcmp(which,"binary") == 0)
       {
         dag_to_partial_sum(&res.g, graph->nb_nodes);
       }
-    if(strcmp(which,"ob-unrank") == 0)
+    if(strcmp(which,"ordered") == 0)
       {
 
         Couple_pred* ordered_array = (Couple_pred*) malloc(sizeof(Couple_pred)*res.g.nb_nodes);
@@ -285,7 +285,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
         free(ordered_array);
         free_graph_rep(&rdag);
       }
-    if(strcmp(which,"alias-unrank") == 0){
+    if(strcmp(which,"alias") == 0){
       // the last 1 is for create aliases since they do not exist yet
       //printf("create adj for alias\n");
       res.g.is_alias = 1;
@@ -380,7 +380,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     free(x);
     strcat(result,".edges");  // Concatenate str3 to result
     //printf("edge file: %s\n",result);
-    if(strcmp(which,"alias-unrank") == 0){
+    if(strcmp(which,"alias") == 0){
       write_graph(result, &res.g,1);
     }
     else{
@@ -432,7 +432,7 @@ int main(int argc, char *argv[]) {
   //char* source = argv[4];
   //char* target = argv[5];
 
-  if(! (strcmp(which, "b-unrank") == 0 || strcmp(which, "ob-unrank") == 0 || strcmp(which, "i-unrank") == 0 || strcmp(which, "alias-unrank") == 0) ){
+  if(! (strcmp(which, "linear") == 0 || strcmp(which, "ordered") == 0 || strcmp(which, "binary") == 0 || strcmp(which, "alias") == 0) ){
     printf("problem with algorithm for preprocessing not implemented \n");
     return EXIT_FAILURE;
   }

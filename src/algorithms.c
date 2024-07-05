@@ -18,7 +18,7 @@ void print_graph(Graph* graph, int full_info){
   printf("Number of nodes : %lu number of edges : %lu\n", graph->nb_nodes, graph->edge_count);
 }
 
-//here we could spare space in b-unrank and only write edges of the dag without weights
+//here we could spare space in linear and only write edges of the dag without weights
 void write_graph(const char *filename, Graph* graph, int is_alias) {
   FILE *file = fopen(filename, "w");
   if (file == NULL) {
@@ -1045,7 +1045,7 @@ List build_rank_b(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, uli rank, ch
   while(v != source_node){
     //printf("new iteration while current v %lu\n",v);
     addNode(&path, g->ids[v]);
-    if (strcmp(which,"i-unrank") == 0){
+    if (strcmp(which,"binary") == 0){
       x = find_pred_opti(v, g, nb_paths_from_s, r); 
     }
     else{
@@ -1226,10 +1226,10 @@ List BRW(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng 
   while(v != source_node){
     //printf("new iteration while current v %lu\n",v);
     addNode(&path, g->ids[v]);
-    if (strcmp(which,"i-unrank") == 0){
+    if (strcmp(which,"binary") == 0){
       v = rand_pred_opti(v, g, nb_paths_from_s, R); 
     }
-    else if (strcmp(which,"alias-unrank") == 0){
+    else if (strcmp(which,"alias") == 0){
       v = rand_pred_alias(v, g, R); 
     }
     else{
@@ -1271,12 +1271,12 @@ uli BRW_op(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rn
     //addNode(&path, g->ids[v]);
     res.op += 4;
 
-    if (strcmp(which,"i-unrank") == 0){
+    if (strcmp(which,"binary") == 0){
       x = rand_pred_opti_op(v, g, nb_paths_from_s, R);
       v = x.v;
       res.op += x.op;
     }
-    else if (strcmp(which,"alias-unrank") == 0){
+    else if (strcmp(which,"alias") == 0){
       x = rand_pred_alias_op(v, g, R);
       v = x.v;
       res.op += x.op;
