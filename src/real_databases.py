@@ -7,6 +7,9 @@
 import os
 import networkx as nx
 import pickle
+import sys
+
+nb_pairs = int(sys.argv[1])
 
 folder_path = 'datasets'
 # ULONG_MAX 18446744073709551615
@@ -37,8 +40,8 @@ def read_dic(s):
 # In[34]:
 
 
-l = [["astro_ph","u"], ["power_grid", "u"], ["hamster_full","u"], ["linux_mail","d"], ["slashdot", "d"], ["milan", "d"], ["vienna","d"], ["paris","d"] ]
-#l = [["power_grid", "u"], ["hamster_full","u"], ["aachen", "d"]]
+#l = [["astro_ph","u"], ["power_grid", "u"], ["hamster_full","u"], ["linux_mail","d"], ["slashdot", "d"], ["milan", "d"], ["vienna","d"], ["paris","d"] ]
+l = [["power_grid", "u"], ["hamster_full","u"], ["aachen", "d"]]
 
 
 # In[18]:
@@ -214,8 +217,7 @@ def read_floats_from_file(file_path):
 
 #launch simulations on er query time on average
 pair_dist = "average"
-nb_queries_per_pair = 5000
-nb_pairs = 100
+nb_queries_per_pair = 10000
 import subprocess
 algos = ["linear", "ordered", "binary", "alias"]
 d = { i[0]: {alg:[]   for alg in algos}  for i in l }
@@ -499,13 +501,13 @@ def read_graph_edges(s):
     return list(edges)
 
 
-# In[171]:
+# In[ ]:
 
 
 from scipy.stats import wasserstein_distance
 #launch simulations on biased algos
 pair_dist = "average"
-nb_pairs = 20
+pairs = nb_pairs/2
 import subprocess
 algos = ["random_weights", "URW"]
 d_was = { i[0]: {alg:[]   for alg in algos}  for i in l }
