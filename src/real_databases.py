@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[192]:
+# In[15]:
 
 
 import os
@@ -12,7 +12,7 @@ folder_path = 'datasets'
 # ULONG_MAX 18446744073709551615
 
 
-# In[193]:
+# In[16]:
 
 
 def file_exists(file_path):
@@ -34,19 +34,19 @@ def read_dic(s):
         return b
 
 
-# In[66]:
+# In[34]:
 
 
 l = [["astro_ph","u"], ["power_grid", "u"], ["hamster_full","u"], ["linux_mail","d"], ["slashdot", "d"], ["milan", "d"], ["vienna","d"], ["paris","d"] ]
 #l = [["power_grid", "u"], ["hamster_full","u"], ["aachen", "d"]]
 
 
-# In[67]:
+# In[18]:
 
 
 #launch pre-computations
 import subprocess
-algos = ["b-unrank", "ob-unrank", "i-unrank", "alias-unrank"]
+algos = ["linear", "ordered", "binary", "alias"]
 j = 0
 for x in l:
     file_path = folder_path + "/" + x[0] + ".edge"
@@ -57,7 +57,7 @@ for x in l:
     j += 1
 
 
-# In[68]:
+# In[19]:
 
 
 info = dict()
@@ -78,7 +78,7 @@ for x in l:
 info
 
 
-# In[46]:
+# In[23]:
 
 
 import random
@@ -86,10 +86,10 @@ def random_pairs(n, infos, x, max_tries_per_node = 1000, more_than_one = 0):
     nb = 0
     res = []
     while nb < n:
-        print("nb", nb, end = " ")
+        #print("nb", nb, end = " ")
         j = random.randint(0, infos[x[0]][0]-1)
-        file_path = folder_path + "/" + x[0] + "_b-unrank/nb_paths_" + str(j) + ".csv"
-        file_path2 = folder_path + "/" + x[0] + "_b-unrank/distances_" + str(j) + ".csv"
+        file_path = folder_path + "/" + x[0] + "_linear/nb_paths_" + str(j) + ".csv"
+        file_path2 = folder_path + "/" + x[0] + "_linear/distances_" + str(j) + ".csv"
         ll = read_integers_from_file(file_path)
         ll2 = read_integers_from_file(file_path2)
         tent = 0
@@ -155,7 +155,7 @@ def calculate_mean_and_std(array):
     return mean, std_dev
 
 
-# In[47]:
+# In[21]:
 
 
 def read_integers_from_file(file_path):
@@ -193,7 +193,7 @@ def read_floats_from_file(file_path):
 #     d_dist[x[0]] = dict()
 #     j = 0
 #     while True:
-#         file_path = folder_path + "/" + x[0] + "_b-unrank/distances_" + str(j) + ".csv"
+#         file_path = folder_path + "/" + x[0] + "_linear/distances_" + str(j) + ".csv"
 #         if file_exists(file_path):
 #             ll = read_integers_from_file(file_path)
 #             for z in range(len(ll)):
@@ -209,7 +209,7 @@ def read_floats_from_file(file_path):
 #         j += 1
 
 
-# In[90]:
+# In[22]:
 
 
 #launch simulations on er query time on average
@@ -217,7 +217,7 @@ pair_dist = "average"
 nb_queries_per_pair = 5000
 nb_pairs = 100
 import subprocess
-algos = ["b-unrank", "ob-unrank", "i-unrank", "alias-unrank"]
+algos = ["linear", "ordered", "binary", "alias"]
 d = { i[0]: {alg:[]   for alg in algos}  for i in l }
 for x in l:
     file_path = folder_path + "/" + x[0]  + ".edge"
@@ -238,7 +238,7 @@ for x in l:
             
 
 
-# In[78]:
+# In[24]:
 
 
 # #launch simulations on er query time on long distance
@@ -250,7 +250,7 @@ for x in l:
 # nb_queries_per_pair = 500000
 # nb_pairs = 30
 # import subprocess
-# algos = ["b-unrank", "ob-unrank", "i-unrank", "alias-unrank"]
+# algos = ["linear", "ordered", "binary", "alias"]
 # d = { i: {alg:[]   for alg in algos}  for i in l }
 
 # for x in l:
@@ -280,7 +280,7 @@ for x in l:
             
 
 
-# In[79]:
+# In[25]:
 
 
 import matplotlib.pyplot as plt
@@ -347,7 +347,7 @@ def plot_bar_chart(data, xlabel, ylabel, legend, filename, dim1 = 8, dim2 = 5, b
 # plot_bar_chart(data)
 
 
-# In[80]:
+# In[26]:
 
 
 # def name(i):
@@ -357,7 +357,7 @@ def plot_bar_chart(data, xlabel, ylabel, legend, filename, dim1 = 8, dim2 = 5, b
 #         return str(i[1][0])+"_"+str(i[1][1])
 
 
-# In[186]:
+# In[27]:
 
 
 data = {i[0][:3]:  { e: calculate_mean_and_std(d[i[0]][e])   for e in algos }  for i in l}
@@ -365,19 +365,19 @@ save_dic(data,"queries_real")
 plot_bar_chart(data, "real-world datasets", "#operations", "average #operations on queries", "queries_real.pdf")
 
 
-# In[36]:
+# In[28]:
 
 
 # data = {i:  { e: calculate_mean_and_std(d[i][e])   for e in algos }  for i in l if i[0]!="gr"}
 # plot_bar_chart(data, "synth data", "#operations", "average #operations on queries", "queries2.pdf")
 
 
-# In[94]:
+# In[29]:
 
 
 #launch bars on pre-computations
 import subprocess
-algos = ["b-unrank", "ob-unrank", "i-unrank", "alias-unrank"]
+algos = ["linear", "ordered", "binary", "alias"]
 d_pre = { i[0]: {alg:[]   for alg in algos}  for i in l }
 for x in l:
     for alg in algos:
@@ -386,7 +386,7 @@ for x in l:
         d_pre[x[0]][alg] = ll
 
 
-# In[187]:
+# In[30]:
 
 
 data = {i[0][:3]:  { e: calculate_mean_and_std(d_pre[i[0]][e])   for e in algos }  for i in l}
@@ -524,7 +524,7 @@ for x in l:
     for e in ll:
         print(e)
         for alg in algos: 
-            file =  x[0]+  "_" + "b-unrank" + "/"+ str(e[0][0]) + ".edges"
+            file =  x[0]+  "_" + "linear" + "/"+ str(e[0][0]) + ".edges"
             #dag = nx.read_edgelist(folder_path + "/" + file, create_using=nx.DiGraph, data=False)
             edges = read_graph_edges(folder_path+"/"+file)
             dag = nx.from_edgelist(edges, create_using=nx.DiGraph())
@@ -576,7 +576,7 @@ plot_bar_chart(data, "", "wasserstein distance", "wasserstein distance from unif
 #     for e in ll:
 #         print(e)
 #         for alg in algos: 
-#             file =  x[0]+  "_" + "b-unrank" + "/"+ str(e[0][0]) + ".edges"
+#             file =  x[0]+  "_" + "linear" + "/"+ str(e[0][0]) + ".edges"
 #             #dag = nx.read_edgelist(folder_path + "/" + file, create_using=nx.DiGraph, data=False)
 #             edges = read_graph_edges(folder_path+"/"+file)
 #             dag = nx.from_edgelist(edges, create_using=nx.DiGraph())
@@ -600,7 +600,7 @@ plot_bar_chart(data, "", "wasserstein distance", "wasserstein distance from unif
 # plot_bar_chart(data, "", "wasserstein distance", "wasserstein distance from uniform", "biase_more_one_real.pdf", dim1 = 5, dim2 = 5, bar_w = 0.25)
 
 
-# In[177]:
+# In[31]:
 
 
 def get_folder_size(folder_path):
@@ -613,25 +613,26 @@ def get_folder_size(folder_path):
     return total_size
 
 
-# In[182]:
+# In[32]:
 
 
 memory = dict()
-algos = ["b-unrank", "ob-unrank", "i-unrank", "alias-unrank"]
 #launch bars on pre-computations
 import subprocess
-algos = ["b-unrank", "ob-unrank", "i-unrank", "alias-unrank"]
+algos = ["linear", "ordered", "binary", "alias"]
 memory = { i[0]: {alg:[]   for alg in algos}  for i in l }
 for x in l:
     for alg in algos:
         file =  x[0] + "_" + alg
+        subprocess.run(["mv", folder_path+"/"+file+"/"+"pre_time.csv", folder_path+"/"])
         subprocess.Popen("rm " + folder_path+"/"+file+"/"+"queries*", shell=True,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
         memory[x[0]][alg] = [get_folder_size(folder_path+"/"+file)]
+        subprocess.run(["mv", folder_path + "/" + "pre_time.csv", folder_path+"/"+file+"/"])
 
 
-# In[183]:
+# In[33]:
 
 
 data = {i[0][:3]:  { e: calculate_mean_and_std(memory[i[0]][e])   for e in algos }  for i in l}

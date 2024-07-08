@@ -11,7 +11,9 @@
 // In total the graph can not contain more than 4294967295 shortest paths since we use unsigned long int
 
 
-gsl_rng * R;  /* global generator */
+//gsl_rng * R;  /* global generator */
+
+
 
 char* string_from_uli(uli x){
   char tmp2[100];
@@ -53,8 +55,10 @@ char* get_first_part(const char *str, const char * which) {
 
 
 
-void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, char* first_part, char* which, gsl_rng * R, char* time_or_operations){
+void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, char* first_part, char* which, char* time_or_operations, char* directed){
   printf("start queries\n");
+  //Graph_rep origin = create_adjacency_list(graph, directed, 0, 0, 0);
+
   char* x;
   char nbpath_name[100];
   strcpy(nbpath_name, first_part);  // Copy str1 into result
@@ -103,7 +107,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
         printf("Problem reading values of nb_paths \n");
         exit(-1);
       }
-      //printf("nb paths from %lu\n", nb_paths_from_s[node]);
+      //printf("nb %lu %lu,", node, nb_paths_from_s[node]);
       node += 1;
   }
 
@@ -114,7 +118,8 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   else{
    rdag = create_adjacency_list(&dag, "d", 1, 0, 0); 
   }
-  //print_graph_rep(&rdag);
+  /* print_graph_rep(&rdag); */
+  /* puts("fin"); */
 
   List* paths = (List*) malloc(nb_queries * sizeof(List));
   if(paths == NULL){
@@ -129,7 +134,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
 
   /* Graph_rep org = create_adjacency_list(graph, "d", 0, 0, 0); */
   /* print_graph_rep(&org); */
-  printf("salut\n");
+
   struct timeval t1, t2;
   double elapsedTime;
   uli nb_operations = 0;
@@ -142,7 +147,7 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   if(strcmp(time_or_operations,"t") == 0){
     printf("count time not operations\n");
     for(uli que = 0; que < nb_queries; que++){
-      paths[que] = BRW(&rdag, nb_paths_from_s, source_node, target_node, which, R);
+      paths[que] = BRW(&rdag, nb_paths_from_s, source_node, target_node, which);
       //unrank uncomment bellow
       /* uli rank = gsl_rng_uniform_int(R, nb_paths_from_s[target_node]); */
       /* //printf("******************** query %lu rank sampled : %lu from a total of %lu \n", que, rank, nb_paths_from_s[target_node]); */
@@ -155,8 +160,11 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   }
   else if(strcmp(time_or_operations,"c") == 0){
     printf("count operations not time\n");
+    //printf("nb paths n %lu\n", n);
+    //char tmpc2;
+    //scanf("%c", &tmpc2);
     for(uli que = 0; que < nb_queries; que++){
-    nb_operations_tmp = BRW_op(&rdag, nb_paths_from_s, source_node, target_node, which, R);
+      nb_operations_tmp = BRW_op(&rdag, nb_paths_from_s, source_node, target_node, which);
     nb_operations += nb_operations_tmp;
     }
   }
@@ -211,6 +219,8 @@ void queries(Graph* graph, uli source_node, uli target_node, uli nb_queries, cha
   free(dag.edges);
 
   fclose(file);
+
+  //free_graph_rep(&origin);
   printf("end queries\n");
 }
 
@@ -236,7 +246,9 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
 
   strcpy(time_name, first_part);  // Copy str1 into result
   strcat(time_name, "/");   // Add slash
-  strcat(time_name,"pre_time.csv");  // Concatenate str2 to result
+  strcat(time_name,"pre_time");  // Concatenate str2 to result
+  //strcpy(time_name, first_part);  // Copy str1 into result
+  strcat(time_name,".csv");  // Concatenate str2 to result
   //printf("tot file : %s\n",tot_path_name);
   FILE* ptr3 = fopen(tot_path_name,"w");
   FILE* ptr4 = fopen(time_name,"w");
@@ -270,15 +282,18 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
       }
     if(strcmp(which,"ordered") == 0)
       {
-
-        Couple_pred* ordered_array = (Couple_pred*) malloc(sizeof(Couple_pred)*res.g.nb_nodes);
-        for(uli ii=0;ii<res.g.nb_nodes;ii++){
-          ordered_array[ii].v = ii;
-          ordered_array[ii].r = res.paths[ii];
-        }
+        uli tmp;
         Graph_rep rdag = create_adjacency_list(&res.g, "d", 0, 0, 0);
-        //puts("in OBBBBBBBBBBBBBBBBBB");
-        //print_graph_rep(&rdag);
+        Couple_pred* ordered_array = (Couple_pred*) malloc(sizeof(Couple_pred)*rdag.nb_nodes);
+        //puts("");
+        for(uli ii=0;ii<rdag.nb_nodes;ii++){
+          ordered_array[ii].v = rdag.ids[ii];
+          tmp = rdag.ids[ii];
+          //find(rdag.id_rev, rdag.ids[ii], &tmp);
+          ordered_array[ii].r = res.paths[tmp];
+        }
+        //char tmpc;
+
         Edge* new_edges = optimal_bunrank_order(res.g.edge_count,  ordered_array, &rdag);
         free(res.g.edges);
         res.g.edges = new_edges;
@@ -380,6 +395,10 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
     free(x);
     strcat(result,".edges");  // Concatenate str3 to result
     //printf("edge file: %s\n",result);
+    //print_nb_paths(res.paths, res.g.nb_nodes);
+    //char tmpc;
+    //print_graph(&res.g,1);
+    //scanf("%c", &tmpc);
     if(strcmp(which,"alias") == 0){
       write_graph(result, &res.g,1);
     }
@@ -446,7 +465,7 @@ int main(int argc, char *argv[]) {
   first_part = get_first_part(argv[1], argv[3]);
 
   // Print the graph
-  print_graph(&graph, 0);
+  //print_graph(&graph, 0);
 
 
   // PREPROCESSING PHASE
@@ -463,16 +482,19 @@ int main(int argc, char *argv[]) {
   }
 
   // GENERATION PHASE
-  const gsl_rng_type * T;
-  gsl_rng_env_setup();
+  /* const gsl_rng_type * T; */
+  /* gsl_rng_env_setup(); */
 
   struct timeval tv; // Seed generation based on time
   gettimeofday(&tv,0);
   //unsigned long mySeed = tv.tv_sec + tv.tv_usec;
-  unsigned long mySeed2 = 0;
-  T = gsl_rng_default; // Generator setup
-  R = gsl_rng_alloc (T);
-  gsl_rng_set(R, mySeed2);
+  //unsigned long mySeed2 = 0;
+  //T = gsl_rng_default; // Generator setup
+  //R = gsl_rng_alloc (gsl_rng_taus2);
+  //gsl_rng_set(R, mySeed2);
+
+  srand((unsigned) time(NULL));
+
 
 
   uli source_node = strtoul(argv[4],NULL,10);
@@ -481,11 +503,11 @@ int main(int argc, char *argv[]) {
 
   char* time_or_operations = argv[7];
 
-  queries(&graph, source_node, target_node, nb_que, first_part, which, R, time_or_operations);
+  queries(&graph, source_node, target_node, nb_que, first_part, which, time_or_operations, directed);
 
   // Free allocated memory
   free(graph.edges);
-  gsl_rng_free(R);
+  //gsl_rng_free(R);
 
   free(first_part);
 

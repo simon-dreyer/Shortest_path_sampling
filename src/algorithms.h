@@ -93,7 +93,7 @@ uli count_nodes(Edge* edges, uli nb);
 Graph_rep create_adjacency_list(Graph* g, char* directed, int is_reversed, int is_alias_create, int is_alias_read);
 void free_graph_rep(Graph_rep* g);
 void print_graph_rep(Graph_rep* g);
-BFS_ret bfs(int start_node, Graph_rep* g);
+BFS_ret bfs(uli start_node, Graph_rep* g);
 void print_graph(Graph* graph, int full_info);
 void write_graph(const char *filename, Graph* graph, int is_alias);
 void dag_to_partial_sum(Graph *g, uli nb_nodes);
@@ -104,9 +104,12 @@ void freeList(Node* head);
 void reverseList(List* head);
 void writeResults(List* head, uli nb, const char* filename, const char* timename, const char* operationname, double time, uli nb_operations, char* time_or_operations);
 void initList(List* list);
-List BRW(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng * R);
-uli BRW_op(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which, gsl_rng * R);
+List BRW(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which);
+uli BRW_op(Graph_rep* g, uli* nb_paths_from_s, uli s, uli t, char* which);
 
 bool find(Dictionary* dict, uli key, uli* value);
 void add_alias_prob_to_graph(Graph * g, Graph_rep* a);
 void create_alias_tables(double* probabilities, uli n, uli* alias, double* prob);
+
+void print_nb_paths(uli* paths, uli nodes);
+uli rand_ulong_range(uli min, uli max);
