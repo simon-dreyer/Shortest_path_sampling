@@ -58,7 +58,7 @@ def repr(i):
 
 
 import math
-nb_nodes = 1024
+nb_nodes = 1024*16
 nb_graphs_er = 5
 start = 3
 nb_graphs_ba = 3
@@ -72,7 +72,7 @@ list_grid = [ ( int(math.sqrt(nb_nodes)),int(math.sqrt(nb_nodes))), (4,nb_nodes/
 #generate ER graphs
 import networkx as nx
 
-list_er = [i for i in range(start, nb_graphs_er+start)]
+list_er = [i for i in range(start, nb_graphs_er+start,2)]
 for i in list_er:
     g = nx.fast_gnp_random_graph(nb_nodes, (math.log(nb_nodes)*i)/nb_nodes )
     file_path = folder_path + "/er_" + str(nb_nodes) + "_" + repr(i) + ".edges"
@@ -84,7 +84,7 @@ for i in list_er:
 
 
 #generate BA graphs
-list_ba = [i for i in range(start_ba, nb_graphs_ba+start_ba)]
+list_ba = [i for i in range(start_ba, nb_graphs_ba+start_ba,2)]
 for i in list_ba:
     g = nx.barabasi_albert_graph(nb_nodes, i)
     file_path = folder_path + "/ba_" + str(nb_nodes) + "_" + repr(i) + ".edges"
@@ -107,8 +107,8 @@ for i in list_grid:
 # In[29]:
 
 
-l = [("er", i) for i in range(start, nb_graphs_er+start)]
-l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba)]
+l = [("er", i) for i in range(start, nb_graphs_er+start, 2)]
+l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba,2)]
 l += [ ("gr", e) for e in list_grid ]
 
 
@@ -415,8 +415,8 @@ plot_bar_chart(data, "synth data", "#operations per unit length", "average #oper
 # In[17]:
 
 
-l = [("er", i) for i in range(start, nb_graphs_er+start)]
-l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba)]
+l = [("er", i) for i in range(start, nb_graphs_er+start, 2)]
+l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba,2)]
 l += [ ("gr", e) for e in list_grid ]
 
 
@@ -517,54 +517,54 @@ def stat_random_weights(g,s,t,l, nb = 100):
 
 
 import networkx as nx
-l = [("er", i) for i in range(start, nb_graphs_er+start)]
-l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba)]
-# l += [ ("gr", e) for e in list_grid ]
+#l = [("er", i) for i in range(start, nb_graphs_er+start, 2)]
+#l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba,2)]
+#l += [ ("gr", e) for e in list_grid ]
 
 
 # In[11]:
 
 
-from scipy.stats import wasserstein_distance
-#launch simulations on biased algos
-pair_dist = "average"
-pairs = nb_pairs/2
-import subprocess
-algos = ["random_weights", "URW"]
-d_was = { i: {alg:[]   for alg in algos}  for i in l }
-for x in l:
-    print(x)
-    i = x[1]
-    file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + ".edges"
-    g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
-    V = list(g.nodes())
-    ll = random_pairs(nb_pairs, g)
-    if ll == -1:
-        print("problem pair sampling")
-        break
-    for e in ll:
-        for alg in algos: 
-            file =  x[0]+ "_" + str(nb_nodes) + "_" + repr(i) + "_" + "linear" + "/"+ e[0] + ".edges"
-            dag = nx.read_edgelist(folder_path + "/" + file, create_using=nx.DiGraph, data=False)
-            sl = list(map(lambda x:tuple(x), nx.all_shortest_paths(g, source=e[0], target=e[1])))
-            print("nb shortest", len(sl))
-            if alg == "random_weights":
-                res = stat_random_weights(g,e[0],e[1],sl, nb = len(sl)*10)
-            else:
-                res = dist_URW(dag, sl )
-            res_unif = [ 1/len(sl) for e in sl ]
-            wr = wasserstein_distance(res_unif, res)
-            print(alg, wr)
-            d_was[x][alg].append(wr)
+# from scipy.stats import wasserstein_distance
+# #launch simulations on biased algos
+# pair_dist = "average"
+# pairs = nb_pairs/2
+# import subprocess
+# algos = ["random_weights", "URW"]
+# d_was = { i: {alg:[]   for alg in algos}  for i in l }
+# for x in l:
+#     print(x)
+#     i = x[1]
+#     file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + ".edges"
+#     g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
+#     V = list(g.nodes())
+#     ll = random_pairs(nb_pairs, g)
+#     if ll == -1:
+#         print("problem pair sampling")
+#         break
+#     for e in ll:
+#         for alg in algos: 
+#             file =  x[0]+ "_" + str(nb_nodes) + "_" + repr(i) + "_" + "linear" + "/"+ e[0] + ".edges"
+#             dag = nx.read_edgelist(folder_path + "/" + file, create_using=nx.DiGraph, data=False)
+#             sl = list(map(lambda x:tuple(x), nx.all_shortest_paths(g, source=e[0], target=e[1])))
+#             print("nb shortest", len(sl))
+#             if alg == "random_weights":
+#                 res = stat_random_weights(g,e[0],e[1],sl, nb = len(sl)*10)
+#             else:
+#                 res = dist_URW(dag, sl )
+#             res_unif = [ 1/len(sl) for e in sl ]
+#             wr = wasserstein_distance(res_unif, res)
+#             print(alg, wr)
+#             d_was[x][alg].append(wr)
             
 
 
-# In[30]:
+# # In[30]:
 
 
-data = {name(i):  { e: calculate_mean_and_std(d_was[i][e], std = False)   for e in algos }  for i in l}
-save_dic(data,"bias_synth")
-plot_bar_chart(data, "synth data", "wasserstein distance", "wasserstein distance from uniform", "biase_more_one.pdf", dim1 = 5, dim2 = 5, bar_w = 0.25)
+# data = {name(i):  { e: calculate_mean_and_std(d_was[i][e], std = False)   for e in algos }  for i in l}
+# save_dic(data,"bias_synth")
+# plot_bar_chart(data, "synth data", "wasserstein distance", "wasserstein distance from uniform", "biase_more_one.pdf", dim1 = 5, dim2 = 5, bar_w = 0.25)
 
 
 # In[106]:
@@ -632,8 +632,8 @@ def get_folder_size(folder_path):
 # In[33]:
 
 
-l = [("er", i) for i in range(start, nb_graphs_er+start)]
-l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba)]
+l = [("er", i) for i in range(start, nb_graphs_er+start, 2)]
+l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba,2)]
 l += [ ("gr", e) for e in list_grid ]
 
 
