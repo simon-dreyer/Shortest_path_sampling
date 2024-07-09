@@ -40,8 +40,8 @@ def read_dic(s):
 # In[34]:
 
 
-#l = [["astro_ph","u"], ["power_grid", "u"], ["hamster_full","u"], ["linux_mail","d"], ["slashdot", "d"], ["milan", "d"], ["vienna","d"], ["paris","d"] ]
-l = [["power_grid", "u"], ["hamster_full","u"], ["aachen", "d"]]
+l = [["astro_ph","u"], ["power_grid", "u"], ["hamster_full","u"], ["linux_mail","d"], ["slashdot", "d"], ["milan", "d"], ["vienna","d"], ["paris","d"] ]
+#l = [["power_grid", "u"], ["hamster_full","u"], ["aachen", "d"]]
 
 
 # In[18]:
