@@ -1,23 +1,27 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[15]:
+# In[1]:
 
 
 import os
-import networkx as nx
 import pickle
 import sys
 
 nb_pairs = int(sys.argv[1])
 
-folder_path = 'datasets'
-# ULONG_MAX 18446744073709551615
+def create_folder_if_not_exists(folder_path):
+    """
+    Creates a folder if it does not exist.
 
-
-# In[16]:
-
-
+    :param folder_path: Path of the folder to create
+    """
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        print(f"Folder '{folder_path}' created.")
+    else:
+        print(f"Folder '{folder_path}' already exists.")
+        
 def file_exists(file_path):
     """
     Checks if a file exists.
@@ -26,6 +30,9 @@ def file_exists(file_path):
     :return: True if the file exists, False otherwise
     """
     return os.path.isfile(file_path)
+
+folder_path = 'synthetique_databases'
+create_folder_if_not_exists(folder_path)
 
 def save_dic(d,s):
     with open(s+'.pickle', 'wb') as handle:
@@ -37,14 +44,75 @@ def read_dic(s):
         return b
 
 
-# In[34]:
+# In[2]:
 
 
-l = [["astro_ph","u"], ["power_grid", "u"], ["hamster_full","u"], ["linux_mail","d"], ["slashdot", "d"], ["milan", "d"], ["vienna","d"], ["paris","d"] ]
-#l = [["power_grid", "u"], ["hamster_full","u"], ["aachen", "d"]]
+def repr(i):
+    if type(i) == int:
+        return str(i)
+    else:
+        return str(i[0])+"_"+str(i[1])
 
 
-# In[18]:
+# In[3]:
+
+
+import math
+nb_nodes = 1024
+nb_graphs_er = 5
+start = 3
+nb_graphs_ba = 3
+start_ba = 4
+list_grid = [ ( int(math.sqrt(nb_nodes)),int(math.sqrt(nb_nodes))), (4,nb_nodes//4), (16,nb_nodes//16) ]
+
+
+# In[4]:
+
+
+#generate ER graphs
+import networkx as nx
+
+list_er = [i for i in range(start, nb_graphs_er+start)]
+for i in list_er:
+    g = nx.fast_gnp_random_graph(nb_nodes, (math.log(nb_nodes)*i)/nb_nodes )
+    file_path = folder_path + "/er_" + str(nb_nodes) + "_" + repr(i) + ".edges"
+    if not file_exists(file_path):
+        nx.write_edgelist(g, file_path, data=False)
+
+
+# In[5]:
+
+
+#generate BA graphs
+list_ba = [i for i in range(start_ba, nb_graphs_ba+start_ba)]
+for i in list_ba:
+    g = nx.barabasi_albert_graph(nb_nodes, i)
+    file_path = folder_path + "/ba_" + str(nb_nodes) + "_" + repr(i) + ".edges"
+    if not file_exists(file_path):
+        nx.write_edgelist(g, file_path, data=False)
+
+
+# In[6]:
+
+
+#generate grid graph
+for i in list_grid:
+    g = nx.grid_2d_graph(i[0],i[1])
+    g = nx.convert_node_labels_to_integers(g)
+    file_path = folder_path + "/gr_" + str(nb_nodes) + "_" + repr(i) + ".edges"
+    if not file_exists(file_path):
+        nx.write_edgelist(g, file_path, data=False)
+
+
+# In[29]:
+
+
+l = [("er", i) for i in range(start, nb_graphs_er+start)]
+l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba)]
+l += [ ("gr", e) for e in list_grid ]
+
+
+# In[8]:
 
 
 #launch pre-computations
@@ -52,65 +120,36 @@ import subprocess
 algos = ["linear", "ordered", "binary", "alias"]
 j = 0
 for x in l:
-    file_path = folder_path + "/" + x[0] + ".edge"
+    i = x[1]
+    print(i)
+    file_path = folder_path + "/" + x[0] +"_" + str(nb_nodes) + "_" + repr(i) + ".edges"
     #g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
     for alg in algos:
         print("filepath : ",file_path)
-        subprocess.run(["./main", file_path ,x[1], alg, str(0), str(1), str(1), 'c']) 
+        subprocess.run(["./main", file_path ,"u", alg, str(0), str(1), str(1), 'c']) 
     j += 1
 
 
-# In[19]:
-
-
-info = dict()
-for x in l:
-    info[x[0]] = dict()
-    file_path = folder_path + "/" + x[0] + ".edge"
-    with open(file_path,'r') as f:
-        edges = set()
-        nodes = set()
-        nb_edges = 0
-        for line in f:
-            nb_edges += 1
-            r = line.split()
-            edges.add((r[0],r[1]))
-            nodes.add(r[0])
-            nodes.add(r[1])
-    info[x[0]] = (len(nodes), len(edges))
-info
-
-
-# In[23]:
+# In[26]:
 
 
 import random
-def random_pairs(n, infos, x, max_tries_per_node = 1000, more_than_one = 0):
-    nb = 0
+def random_pairs(n, g, max_tries = 1000):
+    V = g.nodes()
     res = []
-    while nb < n:
-        #print("nb", nb, end = " ")
-        j = random.randint(0, infos[x[0]][0]-1)
-        file_path = folder_path + "/" + x[0] + "_linear/nb_paths_" + str(j) + ".csv"
-        file_path2 = folder_path + "/" + x[0] + "_linear/distances_" + str(j) + ".csv"
-        ll = read_integers_from_file(file_path)
-        ll2 = read_integers_from_file(file_path2)
-        tent = 0
-        while tent < max_tries_per_node:
-            k = random.randint(0, infos[x[0]][0]-1)
-            #print("len ll ", len(ll), "k", k)
-            if ll[k] != 0 and k!=j:
-                if more_than_one:
-                    if ll[k] > 1:
-                        break
-                else:
-                    break
-            tent += 1
-        if tent < max_tries_per_node:
-            res.append([[j,k], ll2[k], ll[k]])
+    nb = 0
+    tr = 0
+    while nb <n and tr < max_tries:
+        lV = list(V)
+        pair = random.sample(lV, k = 2)
+        if nx.has_path(g,pair[0],pair[1]):
+            res.append(pair)
             nb += 1
+        tr+=1
+    if tr == max_tries:
+        return -1
     return res
-            
+
 def random_pairs_exact(n, V):
     res = []
     for i in range(n):
@@ -146,7 +185,7 @@ def read_integer_from_file(file_path):
     
 import numpy as np
 
-def calculate_mean_and_std(array):
+def calculate_mean_and_std(array, std = True):
     """
     Calculates the mean and standard deviation of an array.
 
@@ -154,11 +193,14 @@ def calculate_mean_and_std(array):
     :return: A tuple containing mean and standard deviation
     """
     mean = np.mean(array)
-    std_dev = np.std(array)
+    if std:
+        std_dev = np.std(array)
+    else:
+        std_dev = 0
     return mean, std_dev
 
 
-# In[21]:
+# In[10]:
 
 
 def read_integers_from_file(file_path):
@@ -189,58 +231,54 @@ def read_floats_from_file(file_path):
             doubles.append(float(line.strip()))
     return doubles
 
-# distances = dict()
-# d_dist = dict()
-# for x in l:
-#     distances[x[0]] = dict()
-#     d_dist[x[0]] = dict()
-#     j = 0
-#     while True:
-#         file_path = folder_path + "/" + x[0] + "_linear/distances_" + str(j) + ".csv"
-#         if file_exists(file_path):
-#             ll = read_integers_from_file(file_path)
-#             for z in range(len(ll)):
-#                 if ll[z] in d_dist[x[0]]:
-#                     d_dist[x[0]][ll[z]].append((j,z))
-#                 else:
-#                     d_dist[x[0]][ll[z]] = [(j,z)]
-#                 distances[x[0]][(j,z)] = ll[z]
-#                 #distances[x[0]][(z,j)] = ll[z]
-#         else:
-#             # we have reached the number of nodes
-#             break
-#         j += 1
+distances = dict()
+d_dist = dict()
+for x in l:
+    i = x[1]
+    print(i)
+    distances[x[0]+ "_"+repr(i)] = dict()
+    d_dist[x[0]+ "_"+repr(i)] = dict()
+    for j in range(nb_nodes):
+        file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + "_linear/distances_" + str(j) + ".csv"
+        ll = read_integers_from_file(file_path)
+        for z in range(len(ll)):
+            if ll[z] in d_dist[x[0]+ "_"+repr(i)]:
+                d_dist[x[0]+ "_"+repr(i)][ll[z]].append((j,z))
+            else:
+                d_dist[x[0]+ "_"+repr(i)][ll[z]] = [(j,z)]
+            distances[x[0]+ "_"+repr(i)][(j,z)] = ll[z]
+            distances[x[0]+ "_"+repr(i)][(z,j)] = ll[z]
 
 
-# In[22]:
+# In[11]:
 
 
 #launch simulations on er query time on average
 pair_dist = "average"
-nb_queries_per_pair = 10000
+nb_queries_per_pair = 50000
+#nb_pairs = 40
 import subprocess
 algos = ["linear", "ordered", "binary", "alias"]
-d = { i[0]: {alg:[]   for alg in algos}  for i in l }
+d = { i: {alg:[]   for alg in algos}  for i in l }
 for x in l:
-    file_path = folder_path + "/" + x[0]  + ".edge"
-    print("filepath", file_path)
-    #g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
-    ll = random_pairs(nb_pairs, info, x)
+    i = x[1]
+    file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + ".edges"
+    g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
+    V = list(g.nodes())
+    ll = random_pairs(nb_pairs, g)
     if ll == -1:
         print("problem pair sampling")
         break
-    #print(ll)
     for e in ll:
-        print("current", e)
         for alg in algos:
-            print("current alg", alg)
-            subprocess.run(["./main", file_path ,x[1], alg, str(e[0][0]), str(e[0][1]), str(nb_queries_per_pair), "c"])
-            file =  x[0] + "_" + alg + "/queries_operations_"+ str(nb_queries_per_pair) + ".txt"
-            d[x[0]][alg].append(read_integer_from_file(folder_path + "/" + file)/(nb_queries_per_pair * e[1] ))
+            print(alg, e)
+            subprocess.run(["./main", file_path ,"u", alg, e[0], e[1], str(nb_queries_per_pair), "c"])
+            file =  x[0]+ "_" + str(nb_nodes) + "_" + repr(i) + "_" + alg + "/queries_operations_"+ str(nb_queries_per_pair) + ".txt"
+            d[x][alg].append(read_integer_from_file(folder_path + "/" + file)/(nb_queries_per_pair * distances[x[0]+ "_"+repr(i)][(int(e[0]),int(e[1]))] ))
             
 
 
-# In[24]:
+# In[12]:
 
 
 # #launch simulations on er query time on long distance
@@ -282,7 +320,7 @@ for x in l:
             
 
 
-# In[25]:
+# In[22]:
 
 
 import matplotlib.pyplot as plt
@@ -349,79 +387,70 @@ def plot_bar_chart(data, xlabel, ylabel, legend, filename, dim1 = 8, dim2 = 5, b
 # plot_bar_chart(data)
 
 
-# In[26]:
+# In[15]:
 
 
-# def name(i):
-#     if i[0] != "gr":
-#         return i[0]+"_"+str(i[1])
-#     else:
-#         return str(i[1][0])+"_"+str(i[1][1])
+def name(i):
+    if i[0] != "gr":
+        return i[0]+"_"+str(i[1])
+    else:
+        return str(i[1][0])+"_"+str(i[1][1])
 
 
-# In[27]:
+# In[30]:
 
 
-data = {i[0][:3]:  { e: calculate_mean_and_std(d[i[0]][e])   for e in algos }  for i in l}
-save_dic(data,"queries_real")
-plot_bar_chart(data, "real-world datasets", "#operations", "average #operations on queries", "queries_real.pdf")
+data = {name(i):  { e: calculate_mean_and_std(d[i][e])   for e in algos }  for i in l}
+save_dic(data,"queries_synth")
+plot_bar_chart(data, "synth data", "#operations per unit length", "average #operations on queries", "queries_synth.pdf")
 
 
-# In[28]:
+# In[16]:
 
 
 # data = {i:  { e: calculate_mean_and_std(d[i][e])   for e in algos }  for i in l if i[0]!="gr"}
 # plot_bar_chart(data, "synth data", "#operations", "average #operations on queries", "queries2.pdf")
 
 
-# In[29]:
+# In[17]:
+
+
+l = [("er", i) for i in range(start, nb_graphs_er+start)]
+l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba)]
+l += [ ("gr", e) for e in list_grid ]
+
+
+# In[18]:
 
 
 #launch bars on pre-computations
 import subprocess
 algos = ["linear", "ordered", "binary", "alias"]
-d_pre = { i[0]: {alg:[]   for alg in algos}  for i in l }
+d_pre = { i: {alg:[]   for alg in algos}  for i in l }
 for x in l:
+    i = x[1]
     for alg in algos:
-        file =  x[0] + "_" + alg + "/pre_time.csv"
+        file =  x[0] +  "_" + str(nb_nodes) + "_" + repr(i) + "_" + alg + "/pre_time.csv"
         ll = read_integers_from_file(folder_path+"/"+file)
-        d_pre[x[0]][alg] = ll
+        d_pre[x][alg] = ll
 
 
-# In[30]:
+# In[32]:
 
 
-data = {i[0][:3]:  { e: calculate_mean_and_std(d_pre[i[0]][e])   for e in algos }  for i in l}
-save_dic(data,"pre_comp_real")
+data = {name(i):  { e: calculate_mean_and_std(d_pre[i][e])   for e in algos }  for i in l}
+save_dic(data,"pre_computation_synth")
+plot_bar_chart(data, "synth data", "#time in ms", "average pre-computation time", "pre_comp_synth.pdf")
 
-plot_bar_chart(data, "real-world datasets", "#time in ms", "average pre-computation time", "pre_comp_real.pdf")
 
-
-# In[160]:
+# In[20]:
 
 
 # data = {i[0]+"_"+repr(i[1]):  { e: calculate_mean_and_std(d_pre[i][e])   for e in algos }  for i in l if i[0]!="gr"}
 # plot_bar_chart(data, "er, p = (xlog(n)/n)", "#time in ms", "average pre-computation time", "pre_comp2.pdf")
 
 
-# In[153]:
-
-
-def random_pairs_wasser(n, g, max_tries = 1000):
-    V = g.nodes()
-    res = []
-    nb = 0
-    tr = 0
-    while nb <n and tr < max_tries:
-        lV = list(V)
-        pair = random.sample(lV, k = 2)
-        if nx.has_path(g,pair[0],pair[1]):
-            res.append(pair)
-            nb += 1
-        tr+=1
-    if tr == max_tries:
-        return -1
-    return res
+# In[9]:
 
 
 def construct_dag(l):
@@ -431,14 +460,14 @@ def construct_dag(l):
             if (e[i-1],e[i]) not in g.edges:
                 g.add_edge(e[i-1],e[i])
     return g
-# def connected_gnp(n,p, max_tries = 10, directed = False):
-#     i = 0
-#     while i < max_tries:
-#         g = nx.fast_gnp_random_graph(N, p, directed=directed)
-#         if nx.is_connected(g):
-#             return g
-#         i += 1
-#     return None
+def connected_gnp(n,p, max_tries = 10, directed = False):
+    i = 0
+    while i < max_tries:
+        g = nx.fast_gnp_random_graph(N, p, directed=directed)
+        if nx.is_connected(g):
+            return g
+        i += 1
+    return None
 
 def random_pairs_more_sh(g, V, max_tries = 10):
     i = 0
@@ -454,11 +483,7 @@ def random_pairs_more_sh(g, V, max_tries = 10):
 
 from math import prod
 def prob_URW(dag, w):
-#     print("w", w)
-#     for i in range(1,len(w)):
-#         print("(", w[i],dag.in_degree(w[i]),")", end = " ")
     return prod( 1/dag.in_degree(w[i])  for i in range(1,len(w)))
-
 def dist_URW(dag, l):
     return list(map( lambda x : prob_URW(dag, x), l ))
 
@@ -488,20 +513,16 @@ def stat_random_weights(g,s,t,l, nb = 100):
     
 
 
-# In[154]:
+# In[10]:
 
 
 import networkx as nx
-def read_graph_edges(s):
-    edges = set()
-    with open(s,'r') as f:
-        for line in f:
-            x = line.split(" ")
-            edges.add((x[0],x[1]))
-    return list(edges)
+l = [("er", i) for i in range(start, nb_graphs_er+start)]
+l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba)]
+# l += [ ("gr", e) for e in list_grid ]
 
 
-# In[ ]:
+# In[11]:
 
 
 from scipy.stats import wasserstein_distance
@@ -510,99 +531,92 @@ pair_dist = "average"
 pairs = nb_pairs/2
 import subprocess
 algos = ["random_weights", "URW"]
-d_was = { i[0]: {alg:[]   for alg in algos}  for i in l }
+d_was = { i: {alg:[]   for alg in algos}  for i in l }
 for x in l:
-    print(x, info[x[0]])
-    file_path = folder_path + "/" + x[0]  + ".edge"
-    if x[1] == "u":
-        g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
-    else:
-        g = nx.read_edgelist(file_path, create_using=nx.DiGraph, data=False)
-        
-    ll = random_pairs(nb_pairs, info, x, more_than_one = 0)
+    print(x)
+    i = x[1]
+    file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + ".edges"
+    g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
+    V = list(g.nodes())
+    ll = random_pairs(nb_pairs, g)
     if ll == -1:
         print("problem pair sampling")
         break
     for e in ll:
-        print(e)
         for alg in algos: 
-            file =  x[0]+  "_" + "linear" + "/"+ str(e[0][0]) + ".edges"
-            #dag = nx.read_edgelist(folder_path + "/" + file, create_using=nx.DiGraph, data=False)
-            edges = read_graph_edges(folder_path+"/"+file)
-            dag = nx.from_edgelist(edges, create_using=nx.DiGraph())
-            sl = list(map(lambda x:tuple(x), nx.all_shortest_paths(g, source=str(e[0][0]), target=str(e[0][1]))))
+            file =  x[0]+ "_" + str(nb_nodes) + "_" + repr(i) + "_" + "linear" + "/"+ e[0] + ".edges"
+            dag = nx.read_edgelist(folder_path + "/" + file, create_using=nx.DiGraph, data=False)
+            sl = list(map(lambda x:tuple(x), nx.all_shortest_paths(g, source=e[0], target=e[1])))
             print("nb shortest", len(sl))
             if alg == "random_weights":
-                res = stat_random_weights(g,str(e[0][0]),str(e[0][1]),sl, nb = len(sl)*10)
+                res = stat_random_weights(g,e[0],e[1],sl, nb = len(sl)*10)
             else:
                 res = dist_URW(dag, sl )
             res_unif = [ 1/len(sl) for e in sl ]
             wr = wasserstein_distance(res_unif, res)
             print(alg, wr)
-            d_was[x[0]][alg].append(wr)
+            d_was[x][alg].append(wr)
             
 
 
-# In[ ]:
+# In[30]:
 
 
-data = {i[0][:3]:  { e: calculate_mean_and_std(d_was[i[0]][e])   for e in algos }  for i in l}
-save_dic(data,"bias_real")
-
-plot_bar_chart(data, "", "wasserstein distance", "wasserstein distance from uniform", "biase_real.pdf", dim1 = 5, dim2 = 5, bar_w = 0.25)
-
-
-# In[184]:
+data = {name(i):  { e: calculate_mean_and_std(d_was[i][e], std = False)   for e in algos }  for i in l}
+save_dic(data,"bias_synth")
+plot_bar_chart(data, "synth data", "wasserstein distance", "wasserstein distance from uniform", "biase_more_one.pdf", dim1 = 5, dim2 = 5, bar_w = 0.25)
 
 
-#too long to run for now
+# In[106]:
+
 
 # from scipy.stats import wasserstein_distance
-# #launch simulations on biased algos
+# #launch simulations on biased algos with more than one sp
 # pair_dist = "average"
+# nb_pairs = 30
 # import subprocess
 # algos = ["random_weights", "URW"]
-# d_was_1 = { i[0]: {alg:[]   for alg in algos}  for i in l }
-# for x in reversed(l):
-#     print(x, info[x[0]])
-#     file_path = folder_path + "/" + x[0]  + ".edge"
-#     if x[1] == "u":
-#         g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
-#     else:
-#         g = nx.read_edgelist(file_path, create_using=nx.DiGraph, data=False)
-        
-#     ll = random_pairs(nb_pairs, info, x, more_than_one = 1)
-#     if ll == -1:
-#         print("problem pair sampling")
-#         break
-#     for e in ll:
-#         print(e)
-#         for alg in algos: 
-#             file =  x[0]+  "_" + "linear" + "/"+ str(e[0][0]) + ".edges"
-#             #dag = nx.read_edgelist(folder_path + "/" + file, create_using=nx.DiGraph, data=False)
-#             edges = read_graph_edges(folder_path+"/"+file)
-#             dag = nx.from_edgelist(edges, create_using=nx.DiGraph())
-#             sl = list(map(lambda x:tuple(x), nx.all_shortest_paths(g, source=str(e[0][0]), target=str(e[0][1]))))
-#             print("nb shortest", len(sl))
+# d_was_1 = { i: {alg:[]   for alg in algos}  for i in l }
+# for x in l:
+#     print(x)
+#     i = x[1]
+#     file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + ".edges"
+#     g = nx.read_edgelist(file_path, create_using=nx.Graph, data=False)
+#     nb_effective = 0
+#     while nb_effective < nb_pairs:    
+#         ll = random_pairs(1, g)
+#         if ll == -1:
+#             print("problem pair sampling")
+#             break
+#         e = ll[0]
+#         file =  x[0]+ "_" + str(nb_nodes) + "_" + repr(i) + "_" + "linear" + "/"+ e[0] + ".edges"
+#         dag = nx.read_edgelist(folder_path + "/" + file, create_using=nx.DiGraph, data=False)
+#         sl = list(map(lambda x:tuple(x), nx.all_shortest_paths(g, source=e[0], target=e[1])))
+#         print("nb shortest", len(sl))
+#         if len(sl) != 1:
+#             nb_effective += 1
+#         else:
+#             continue
+#         for alg in algos:
+#             print("entered")
 #             if alg == "random_weights":
-#                 res = stat_random_weights(g,str(e[0][0]),str(e[0][1]),sl, nb = len(sl)*10)
+#                 res = stat_random_weights(g,e[0],e[1],sl, nb = len(sl)*10)
 #             else:
 #                 res = dist_URW(dag, sl )
 #             res_unif = [ 1/len(sl) for e in sl ]
 #             wr = wasserstein_distance(res_unif, res)
 #             print(alg, wr)
-#             d_was_1[x[0]][alg].append(wr)
-            
+#             d_was_1[x][alg].append(wr)
 
 
-# In[185]:
+# In[107]:
 
 
-# data = {i[0]:  { e: calculate_mean_and_std(d_was_1[i[0]][e])   for e in algos }  for i in l}
-# plot_bar_chart(data, "", "wasserstein distance", "wasserstein distance from uniform", "biase_more_one_real.pdf", dim1 = 5, dim2 = 5, bar_w = 0.25)
+# data = {name(i):  { e: calculate_mean_and_std(d_was_1[i][e])   for e in algos }  for i in l}
+# plot_bar_chart(data, "synth data", "wasserstein distance", "wasserstein distance from uniform", "biase_more_one.pdf", dim1 = 5, dim2 = 5, bar_w = 0.25)
 
 
-# In[31]:
+# In[25]:
 
 
 def get_folder_size(folder_path):
@@ -615,32 +629,40 @@ def get_folder_size(folder_path):
     return total_size
 
 
-# In[32]:
-
-
-memory = dict()
-#launch bars on pre-computations
-import subprocess
-algos = ["linear", "ordered", "binary", "alias"]
-memory = { i[0]: {alg:[]   for alg in algos}  for i in l }
-for x in l:
-    for alg in algos:
-        file =  x[0] + "_" + alg
-        subprocess.run(["mv", folder_path+"/"+file+"/"+"pre_time.csv", folder_path+"/"])
-        subprocess.Popen("rm " + folder_path+"/"+file+"/"+"queries*", shell=True,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-        memory[x[0]][alg] = [get_folder_size(folder_path+"/"+file)]
-        subprocess.run(["mv", folder_path + "/" + "pre_time.csv", folder_path+"/"+file+"/"])
-
-
 # In[33]:
 
 
-data = {i[0][:3]:  { e: calculate_mean_and_std(memory[i[0]][e])   for e in algos }  for i in l}
-save_dic(data,"memory_real")
+l = [("er", i) for i in range(start, nb_graphs_er+start)]
+l += [("ba", i) for i in range(start_ba, nb_graphs_ba+start_ba)]
+l += [ ("gr", e) for e in list_grid ]
 
-plot_bar_chart(data, "", "size in bytes", "Memory required to store data", "memory_real.pdf", dim1 = 6, dim2 = 5, bar_w = 0.15)
+
+# In[34]:
+
+
+memory = dict()
+algos = ["linear", "ordered", "binary", "alias"]
+#launch bars on pre-computations
+import subprocess
+memory = { i: {alg:[]   for alg in algos}  for i in l }
+for x in l:
+    for alg in algos:
+        file =  x[0] +"_" + str(nb_nodes) + "_" + repr(x[1]) + "_" + alg
+        subprocess.Popen("rm " + folder_path+"/"+file+"/"+"queries*", shell=True,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+        subprocess.run(["mv", folder_path+"/"+file+"/"+"pre_time.csv", folder_path+"/"])
+        memory[x][alg] = [get_folder_size(folder_path+"/"+file)]
+        subprocess.run(["mv", folder_path + "/" + "pre_time.csv", folder_path+"/"+file+"/"])
+
+
+# In[36]:
+
+
+data = {name(i):  { e: calculate_mean_and_std(memory[i][e])   for e in algos }  for i in l}
+save_dic(data,"memory_synth")
+
+plot_bar_chart(data, "", "size in bytes", "Memory required to store data", "memory_synth.pdf",  bar_w = 0.15)
 
 
 # In[ ]:
