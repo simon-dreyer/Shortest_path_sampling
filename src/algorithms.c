@@ -1173,12 +1173,16 @@ uli rand_pred_opti(uli v, Graph_rep* g, uli n){
   // avoid function call dicho_label
   //printf("rand pred opti gsl from 0 to %lu\n", nb_paths_from_s[g->ids[v]]);
   uli r = rand_ulong_range(0, n-1);
+
   //uli r = gsl_rng_uniform_int(R, n);
   uli i = 0;
   uli j = g->node_count[v]-1;
+  Couple_adj tmp = g->adj_list[v][0];
+  if(r >= tmp.nb){
+  uli x;
   // printf("dicho i %lu j %lu\n",i,j);
-  while(j - i + 1 > 1){
-    uli x = (i+j - 1)/2;
+  while(j > i + 1){
+    x = (i+j)/2;
     // printf("x %lu\n", x);
     Couple_adj y = g->adj_list[v][x]; // *((adj_list+v*nb_nodes + x));
     //uli w = x.v;
@@ -1187,20 +1191,21 @@ uli rand_pred_opti(uli v, Graph_rep* g, uli n){
       j = x;
     }
     else{
-      i = x + 1;
+      i = x;
     }
   }
   i = j;
+}
   // end function call replacement
 
 
 
   Couple_adj y = g->adj_list[v][i];  // *((adj_list+v*nb_nodes + i));
   uli w = y.v;
-  if (i > 0){
-    Couple_adj z = g->adj_list[v][i-1]; // *((adj_list+v*nb_nodes + (i-1)));
-    w = z.v;
-  }
+  // if (i > 0){
+  //   Couple_adj z = g->adj_list[v][i-1]; // *((adj_list+v*nb_nodes + (i-1)));
+  //   w = z.v;
+  // }
   return w;
 }
 

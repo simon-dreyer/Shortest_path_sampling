@@ -232,7 +232,7 @@ void preprocessing(Graph* graph, char* directed, char* which, char* first_part){
   char* x;
 
   Graph_rep A = create_adjacency_list(graph, directed, 0, 0, 0);
-  puts("graphe principale print repr");
+  //puts("graphe principale print repr");
   //print_graph_rep(&A);
 
   char dist_name[100];
