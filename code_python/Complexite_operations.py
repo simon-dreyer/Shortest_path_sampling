@@ -363,6 +363,139 @@ def c_Uniforme_PCC_naif(preprocessing):
     return (chemin,compteur)
 
 
+## Algo ordonne
+""" --> On ordonne les prédecesseurs par nombre de PCC décroissants dans les DAGs """
+
+
+def c_Preprocessing_Graph_ordre(G):
+    """ Renvoie un tuple (dags,tables,table_departs,nb_chemins) avec
+        - dags[i] = liste des dictionnaires de predecesseurs lors d'un Dijkstra partant de i
+        - tables[i][j] = table de dimension 2 qui donne le nombre de plus courts chemins partant de i et arrivant à j
+        - table_departs[i] = nombre de plus court chemins partant du noeud i
+        - nb_chemins = nombre total de plus courts chemins dans le graphe """
+
+    compteur = 0
+    n = len(G)
+
+    dags = []
+    tables = np.zeros((n,n))
+
+    for source in range(n):
+        pred,dist,c = c_Dijkstra_DAG(G,source)
+        compteur += c
+
+        dags.append(pred)
+        compteur += c_Table_PCC_In_Place(pred,dist,source,tables[source])
+
+    # On ordonne les predecesseurs par nombre de pcc incidents décroissant pour optimiser la génération
+    for depart in range(len(dags)):
+        compteur += c_Order_DAG_decreasing_chemins(tables[depart],dags[depart])
+
+    table_departs = np.sum(tables,axis = 1)                                     #nb_chemins[depart] = nb de PCC qui partent de depart
+    compteur += n**2
+    nb_chemins = int(np.sum(table_departs))
+    compteur += n
+    prep = (dags,tables,table_departs,nb_chemins)
+
+    return (prep,compteur)
+
+
+def c_Unranking_PCC_depart_arrivee_ordre(preprocessing, depart, arrivee, rang):
+    """Prend en argument le preprocessing de la fonction de preprocessing, ainsi qu'un noeud de départ et d'arrivée. Renvoie le plus court chemin entre départ et arrivée de rang 'rang' """
+    compteur = 0
+    dags,tables,table_departs,nb_chemins = preprocessing
+
+    dag_travail = dags[depart]
+    table_travail = tables[depart]
+
+    if table_travail[arrivee] == 0:
+        raise Exception("depart et arrivee pas dans la même composante connexe")
+
+    rang_reduit = rang % tables[depart][arrivee]
+    compteur +=1
+
+    chemin = [arrivee]
+    noeud_courant = arrivee
+
+    # On reconstruit le chemin de l'arrivée au départ en parcourant les prédecesseurs de proche en proche
+    while (noeud_courant != depart):
+        i = 0
+        pred_courant = dag_travail[noeud_courant][i]
+
+        # On cherche le bon prédecesseur
+        while (rang_reduit >= table_travail[pred_courant]):
+            rang_reduit = rang_reduit - table_travail[pred_courant]
+            i+=1
+            pred_courant = dag_travail[noeud_courant][i]
+            compteur += 1
+
+        chemin.append(pred_courant)
+        noeud_courant = pred_courant
+        compteur +=1
+
+    chemin.reverse()
+    compteur += len(chemin)
+    return (chemin,compteur)
+
+
+
+
+def c_Unranking_PCC_depart_ordre(preprocessing, depart, rang):
+    """Prend en argument le preprocessing de la fonction de preprocessing, ainsi qu'un noeud de départ. Renvoie le plus court chemin partant de départ de rang 'rang' """
+    compteur = 0
+    dags,tables,table_departs,nb_chemins = preprocessing
+    table_travail = tables[depart]
+
+    rang_reduit = rang % table_departs[depart]
+    compteur +=1
+
+
+    # On trouve le noeud d'arrivée
+    arrivee_courante = 0
+    while (rang_reduit >= table_travail[arrivee_courante]):
+        rang_reduit = rang_reduit - table_travail[arrivee_courante]
+        arrivee_courante += 1
+        compteur += 1
+
+    chemin,c = c_Unranking_PCC_depart_arrivee_ordre(preprocessing,depart,arrivee_courante,rang_reduit)
+    compteur += c
+    return (chemin,compteur)
+
+
+
+def c_Unranking_PCC_ordre(preprocessing,rang):
+    """Prend en argument le preprocessing de la fonction de preprocessing. Renvoie le plus court chemin de rang 'rang' """
+    compteur = 0
+    dags,tables,table_departs,nb_chemins = preprocessing
+
+    rang_reduit = rang % nb_chemins
+    compteur += 1
+
+    # On trouve le noeud de départ
+    depart_courant = 0
+    while (rang_reduit >= table_departs[depart_courant]):
+        rang_reduit = rang_reduit - table_departs[depart_courant]
+        depart_courant += 1
+        compteur += 1
+
+    chemin,c = c_Unranking_PCC_depart_ordre(preprocessing,depart_courant,rang_reduit)
+    compteur += c
+    return (chemin,compteur)
+
+
+
+def c_Uniforme_PCC_ordre(preprocessing):
+    """Renvoie un plus court chemin de G avec probabilité uniforme sur tous les plus courts chemins"""
+    compteur = 0
+    dags,tables,table_departs,nb_chemins = preprocessing
+    rang = r.randint(0,nb_chemins-1)
+
+    chemin,c = c_Unranking_PCC_ordre(preprocessing,rang)
+    compteur += c
+
+    return (chemin,compteur)
+
+
 
 ## Algo v2
 """ --> On ordonne les prédecesseurs par nombre de PCC décroissants dans les DAGs
@@ -1522,7 +1655,7 @@ def c_Uniforme_ePCC_long_v1(preprocessing,l_min = 0,l_max = -1):
 ## Simulation
 
 
-def calcul_donnees(fonction_prep, fonction_gen, echantillon, nbRequetes = 5):
+def calcul_donnees(fonction_prep, fonction_gen, echantillon, nbRequetes = 10000):
     """Compte les opérations élémentaires lors du preprocessing et des requetes pour tout les graphes de l'échantillon"""
     donnees_prep = []
     donnees_gen = []
@@ -1543,6 +1676,18 @@ def calcul_donnees(fonction_prep, fonction_gen, echantillon, nbRequetes = 5):
 
 
     return (nb_noeuds,donnees_prep,donnees_gen)
+
+
+
+def donnees_generateurs_seeded(liste_fonctions_unrank, liste_prep, nb_chemins, nbRequetes = 1000):
+    """ Calcule le nombre d'opérations élémentaires pour toutes les fonctions unrank de la liste lorsqu'elles sont appelées sur le même chemin. """
+    k = len(liste_fonctions_unrank)
+    data = [[] for i in range(k)]
+    for i in range(nbRequetes):
+        rg = r.randint(0,nb_chemins-1)
+        for j in range(k):
+            data[j].append(liste_fonctions_unrank[j](liste_prep[j], rg)[1])
+    return data
 
 
 
@@ -1606,83 +1751,6 @@ def echantillon_villes(noeuds_min = 0, noeuds_max = 50000):
             echant.append(G)
     return sorted(echant, key=lambda x:len(x))
 
-
-
-
-
-## Dessin
-
-def dessin(abcisse, ordonnees_liste, legendes_liste, titre = "", nom_axe_x = "", nom_axe_y = "", logScale = True):
-    """ Faire un beau dessin. """
-    plt.clf()
-
-    if logScale:
-        plt.xscale("log") ; plt.yscale("log")
-
-    for i in range(len(ordonnees_liste)):
-        ordonnee = ordonnees_liste[i]
-        legende = legendes_liste[i]
-        plt.plot(abcisse,ordonnee, label = legende)
-
-    plt.xlabel(nom_axe_x)
-    plt.ylabel(nom_axe_y)
-    plt.legend()
-    plt.title(titre)
-    plt.show()
-
-
-def complexite_graphe(donnees,preprocessing = True, generateur = True, logScale = False):
-    nb_noeuds,donnees_prep,donnees_gen = donnees
-
-    plt.clf()
-    if logScale:
-        plt.xscale("log") ; plt.yscale("log")
-
-    if preprocessing:
-        plt.plot(nb_noeuds,donnees_prep, color = "green", label = "Preprocessing")
-
-    if generateur:
-        plt.plot(nb_noeuds,donnees_gen, color = "red", label = "Generateur")
-
-    plt.legend()
-    plt.show()
-
-
-def complexite_comparaison_donnees(liste_donnees, preprocessing = True, generateur = True,logScale = True):
-
-
-    plt.clf()
-    if logScale:
-        plt.xscale("log") ; plt.yscale("log")
-
-    if preprocessing:
-        for i in range(len(liste_donnees)):
-            nb_noeuds,donnees_prep,donnees_gen = liste_donnees[i]
-            plt.plot(nb_noeuds,donnees_prep, label = f"Preprocessing {i}")
-
-    if generateur:
-        for i in range(len(liste_donnees)):
-            nb_noeuds,donnees_prep,donnees_gen = liste_donnees[i]
-            plt.plot(nb_noeuds,donnees_gen, label = f"Generateur {i}")
-
-    plt.legend()
-    plt.show()
-
-
-
-def complexite_graphe_comparaison(nb_noeuds,donnees,f,logScale = True):
-    facteur_rescaling = donnees[-1]/f(nb_noeuds[-1])
-    comparaison = [facteur_rescaling*f(n) for n in nb_noeuds]
-
-    plt.clf()
-    if logScale:
-        plt.xscale("log") ; plt.yscale("log")
-
-
-    plt.plot(nb_noeuds,comparaison, color = "blue", label = "f(n)")
-    plt.plot(nb_noeuds,donnees, color = "red", label = "Donnees")
-    plt.legend()
-    plt.show()
 
 
 
@@ -1773,6 +1841,112 @@ def complexite_generateur_comparaison(liste_donnees):
 
 
 
+
+
+
+## Dessin
+
+def dessin(abcisse, ordonnees_liste, legendes_liste, titre = "", nom_axe_x = "", nom_axe_y = "", logScale = True):
+    """ Faire un beau dessin. """
+    plt.clf()
+
+    if logScale:
+        plt.xscale("log") ; plt.yscale("log")
+
+    for i in range(len(ordonnees_liste)):
+        ordonnee = ordonnees_liste[i]
+        legende = legendes_liste[i]
+        plt.plot(abcisse,ordonnee, label = legende)
+
+    plt.xlabel(nom_axe_x)
+    plt.ylabel(nom_axe_y)
+    plt.legend()
+    plt.title(titre)
+    plt.show()
+
+
+def complexite_graphe(donnees,preprocessing = True, generateur = True, logScale = False):
+    nb_noeuds,donnees_prep,donnees_gen = donnees
+
+    plt.clf()
+    if logScale:
+        plt.xscale("log") ; plt.yscale("log")
+
+    if preprocessing:
+        plt.plot(nb_noeuds,donnees_prep, color = "green", label = "Preprocessing")
+
+    if generateur:
+        plt.plot(nb_noeuds,donnees_gen, color = "red", label = "Generateur")
+
+    plt.legend()
+    plt.show()
+
+
+def complexite_comparaison_donnees(liste_donnees, preprocessing = True, generateur = True,logScale = True):
+
+
+    plt.clf()
+    if logScale:
+        plt.xscale("log") ; plt.yscale("log")
+
+    if preprocessing:
+        for i in range(len(liste_donnees)):
+            nb_noeuds,donnees_prep,donnees_gen = liste_donnees[i]
+            plt.plot(nb_noeuds,donnees_prep, label = f"Preprocessing {i}")
+
+    if generateur:
+        for i in range(len(liste_donnees)):
+            nb_noeuds,donnees_prep,donnees_gen = liste_donnees[i]
+            plt.plot(nb_noeuds,donnees_gen, label = f"Generateur {i}")
+
+    plt.legend()
+    plt.show()
+
+
+
+def complexite_graphe_comparaison(nb_noeuds,donnees,f,logScale = True):
+    facteur_rescaling = donnees[-1]/f(nb_noeuds[-1])
+    comparaison = [facteur_rescaling*f(n) for n in nb_noeuds]
+
+    plt.clf()
+    if logScale:
+        plt.xscale("log") ; plt.yscale("log")
+
+
+    plt.plot(nb_noeuds,comparaison, color = "blue", label = "f(n)")
+    plt.plot(nb_noeuds,donnees, color = "red", label = "Donnees")
+    plt.legend()
+    plt.show()
+
+
+def dessin_data_gen(data_gen):
+    plt.clf()
+    for i in range(len(data_gen)):
+        plt.plot(data_gen[i], label = "Generateur " + str(i))
+    plt.legend()
+    plt.show()
+
+
+
+## Autres mesures
+
+def proportion_pred(dags):
+    dico_pred = {}
+    for dag in dags:
+        for noeud in dag:
+            nb_pred = len(dag[noeud])
+            if nb_pred in dico_pred:
+                dico_pred[nb_pred] += 1
+            else :
+                dico_pred[nb_pred] = 1
+    abs = []
+    ord = []
+    for k in sorted(dico_pred.keys()):
+        abs.append(k)
+        ord.append(dico_pred[k])
+    plt.clf()
+    plt.plot(abs,ord)
+    plt.show()
 
 
 ## Utils
