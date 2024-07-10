@@ -237,7 +237,7 @@ for x in l:
     i = x[1]
     print(i)
     distances[x[0]+ "_"+repr(i)] = dict()
-    d_dist[x[0]+ "_"+repr(i)] = dict()
+    #d_dist[x[0]+ "_"+repr(i)] = dict()
     for j in range(nb_nodes):
         file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + "_linear/distances_" + str(j) + ".csv"
         ll = read_integers_from_file(file_path)
