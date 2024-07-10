@@ -232,7 +232,7 @@ def read_floats_from_file(file_path):
     return doubles
 
 distances = dict()
-d_dist = dict()
+#d_dist = dict()
 for x in l:
     i = x[1]
     print(i)
@@ -242,10 +242,10 @@ for x in l:
         file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + "_linear/distances_" + str(j) + ".csv"
         ll = read_integers_from_file(file_path)
         for z in range(len(ll)):
-            if ll[z] in d_dist[x[0]+ "_"+repr(i)]:
-                d_dist[x[0]+ "_"+repr(i)][ll[z]].append((j,z))
-            else:
-                d_dist[x[0]+ "_"+repr(i)][ll[z]] = [(j,z)]
+            # if ll[z] in d_dist[x[0]+ "_"+repr(i)]:
+            #     d_dist[x[0]+ "_"+repr(i)][ll[z]].append((j,z))
+            # else:
+            #     d_dist[x[0]+ "_"+repr(i)][ll[z]] = [(j,z)]
             distances[x[0]+ "_"+repr(i)][(j,z)] = ll[z]
             distances[x[0]+ "_"+repr(i)][(z,j)] = ll[z]
 
