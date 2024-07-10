@@ -203,7 +203,7 @@ def calculate_mean_and_std(array, std = True):
 # In[10]:
 
 
-def read_integers_from_file(file_path):
+def read_integers_from_file(file_path, i = -1):
     """
     Reads a file containing one integer on each line into an array.
 
@@ -211,10 +211,16 @@ def read_integers_from_file(file_path):
     :return: A list of integers read from the file
     """
     integers = []
+    j = 0
     with open(file_path, 'r') as file:
         for line in file:
             # Strip any whitespace and convert the line to an integer
-            integers.append(int(line.strip()))
+            x = int(line.strip())
+            integers.append(x)
+            j += 1
+            if i!= -1 and j == i:
+                return x
+
     return integers
 
 def read_floats_from_file(file_path):
@@ -231,23 +237,23 @@ def read_floats_from_file(file_path):
             doubles.append(float(line.strip()))
     return doubles
 
-distances = dict()
-#d_dist = dict()
-for x in l:
-    i = x[1]
-    print(i)
-    distances[x[0]+ "_"+repr(i)] = dict()
-    #d_dist[x[0]+ "_"+repr(i)] = dict()
-    for j in range(nb_nodes):
-        file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + "_linear/distances_" + str(j) + ".csv"
-        ll = read_integers_from_file(file_path)
-        for z in range(len(ll)):
-            # if ll[z] in d_dist[x[0]+ "_"+repr(i)]:
-            #     d_dist[x[0]+ "_"+repr(i)][ll[z]].append((j,z))
-            # else:
-            #     d_dist[x[0]+ "_"+repr(i)][ll[z]] = [(j,z)]
-            distances[x[0]+ "_"+repr(i)][(j,z)] = ll[z]
-            distances[x[0]+ "_"+repr(i)][(z,j)] = ll[z]
+# distances = dict()
+# #d_dist = dict()
+# for x in l:
+#     i = x[1]
+#     print(i)
+#     distances[x[0]+ "_"+repr(i)] = dict()
+#     #d_dist[x[0]+ "_"+repr(i)] = dict()
+#     for j in range(nb_nodes):
+#         file_path = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + "_linear/distances_" + str(j) + ".csv"
+#         ll = read_integers_from_file(file_path)
+#         for z in range(len(ll)):
+#             # if ll[z] in d_dist[x[0]+ "_"+repr(i)]:
+#             #     d_dist[x[0]+ "_"+repr(i)][ll[z]].append((j,z))
+#             # else:
+#             #     d_dist[x[0]+ "_"+repr(i)][ll[z]] = [(j,z)]
+#             distances[x[0]+ "_"+repr(i)][(j,z)] = ll[z]
+#             distances[x[0]+ "_"+repr(i)][(z,j)] = ll[z]
 
 
 # In[11]:
@@ -274,8 +280,8 @@ for x in l:
             print(alg, e)
             subprocess.run(["./main", file_path ,"u", alg, e[0], e[1], str(nb_queries_per_pair), "c"])
             file =  x[0]+ "_" + str(nb_nodes) + "_" + repr(i) + "_" + alg + "/queries_operations_"+ str(nb_queries_per_pair) + ".txt"
-            d[x][alg].append(read_integer_from_file(folder_path + "/" + file)/(nb_queries_per_pair * distances[x[0]+ "_"+repr(i)][(int(e[0]),int(e[1]))] ))
-            
+            file_path_distances = folder_path + "/" + x[0] + "_" + str(nb_nodes) + "_" + repr(i) + "_linear/distances_" + str(int(e[0])) + ".csv"
+            d[x][alg].append(read_integer_from_file(folder_path + "/" + file)/(nb_queries_per_pair *read_integers_from_file(file_path_distances, int(e[1])) ))
 
 
 # In[12]:
