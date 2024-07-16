@@ -235,6 +235,79 @@ def c_Construct_DAG(G,selected_edges,tables,source):
     return pred,compteur
 
 
+def c_Calcul_seuil_alias(elements, distrib):
+    """ Elements = liste des valeurs et distrib(element) renvoie le poids de l'élément. Renvoie les listes seuil et alias pour la méthode de l'alias """
+    compteur = 0
+    alveoles = [distrib(elements[i]) for i in range(len(elements))]
+    compteur += len(elements)
+    seuil = [1 for _ in range(len(elements))]
+    alias = [elements[i] for i in range(len(elements))]
+
+    taille_alveole = sum(alveoles)/len(elements)
+    compteur += len(alveoles)
+
+    surcharge = set()
+    souscharge = set()
+    for i in range(len(elements)):
+        if alveoles[i] > taille_alveole:
+            surcharge.add(i)
+        if alveoles[i] < taille_alveole:
+            souscharge.add(i)
+        compteur += 1
+
+    while len(souscharge) > 0 and len(surcharge) > 0:
+        # On donne une partie du poids d'une alveole en surcharge à une alveole en souscharge
+        i = souscharge.pop()
+        j = surcharge.pop()
+        seuil[i] = alveoles[i]/taille_alveole
+        alias[i] = elements[j]
+        compteur += 1
+
+        # On reclasse l'alvéole qui a donné une partie de sa distribution
+        alveoles[j] = alveoles[j] - (taille_alveole - alveoles[i])
+        if alveoles[j] > taille_alveole:
+            surcharge.add(j)
+        if alveoles[j] < taille_alveole:
+            souscharge.add(j)
+        compteur += 1
+
+    return (seuil, alias, compteur)
+
+
+
+def c_Ajoute_alias_dag_IN_PLACE(dag, table):
+    """ A la fin de cette fonction : dag[v] = [ (w, t, alias) pour tout w predecesseur de v]  """
+    compteur = 0
+    for v in dag.keys():
+        sigma_sv = table[v]
+        pred_v = dag[v]
+        compteur += 1
+        if len(pred_v) > 0:
+            seuil, alias,c = c_Calcul_seuil_alias(pred_v, lambda w : table[w])
+            compteur += c
+            for i in range(len(pred_v)):
+                w , t, al = pred_v[i], seuil[i], alias[i]
+                pred_v[i] = (w,t,al)
+                compteur += 1
+    return compteur
+
+
+
+def c_Tire_alias(liste):
+    """ Prend une liste d'éléments de la forme (valeur, seuil , alias) et renvoie une valeur aléatoirement avec la méthode de l'alias. """
+
+    compteur = 0
+    i = r.randint(0, len(liste)-1)
+    t = r.random()
+    compteur += 2
+
+    valeur, seuil, alias = liste[i]
+    if t<= seuil:
+        return (valeur, compteur)
+    else:
+        return (alias, compteur)
+
+
 
 ## Algo naif
 
@@ -1227,6 +1300,119 @@ def c_Uniforme_PCC_v3(preprocessing):
 
 
 
+## Algo alias
+
+
+def c_Preprocessing_Graph_alias(G):
+    """ Renvoie un tuple (dags,table_departs_arrivees,table_departs,nb_chemins) avec
+        - dags[i] = liste des dictionnaires de predecesseurs lors d'un Dijkstra partant de i avec seuil et alias en coordonnées 2 et 3
+        - table_departs_arrivees[depart][j] = (seuil_j, alias_j)
+        - table_departs[i] = (seuil_i, alias_i) """
+
+
+    n = len(G)
+
+    dags = []
+    tables = np.zeros((n,n))
+    compteur = 0
+
+    # Un BFS par noeud + remplissage de la table des pcc + ajoute des alias sur les arêtes
+    for source in range(n):
+        pred,dist,c =  c_BFS_DAG(G, source)
+        compteur += c
+
+        c = c_Table_PCC_In_Place(pred,dist,source,tables[source])
+        compteur += c
+
+        c = c_Ajoute_alias_dag_IN_PLACE(pred,tables[source])
+        compteur += c
+
+        dags.append(pred)
+        compteur += 1
+
+
+    # Tables et variables pour déterminer les départs et arrivées
+    table_departs_arrivees = [[0 for _ in range(n)] for _ in range(n)]
+    for depart in range(n):
+        seuil, alias, c = c_Calcul_seuil_alias([i for i in range(n)], lambda v : tables[depart][v])
+        compteur += c
+
+        for i in range(n):
+            table_departs_arrivees[depart][i] = (i, seuil[i], alias[i])
+            compteur += 1
+
+    table_departs = [0 for _ in range(n)]
+    poids_departs = np.sum(tables,axis = 1)
+    compteur += n**2
+
+    seuil, alias, c = c_Calcul_seuil_alias([i for i in range(n)], lambda v : poids_departs[v])
+    compteur += c
+    for i in range(n):
+        table_departs[i] = (i, seuil[i], alias[i])
+        compteur += 1
+
+    prep = (dags,table_departs_arrivees,table_departs)
+    return (prep, compteur)
+
+
+
+
+
+def c_Marche_Aleatoire_depart_arrivee(preprocessing, depart, arrivee):
+    """Prend en argument le preprocessing ainsi qu'un noeud de départ et d'arrivée. Renvoie un plus court chemin entre départ et arrivée avec proba uniforme. """
+
+    dags = preprocessing[0]
+    dag_travail = dags[depart]
+    compteur = 0
+
+    if not (arrivee in dag_travail):
+        raise Exception("depart et arrivee pas dans la même composante connexe")
+
+    chemin = [arrivee]
+    noeud_courant = arrivee
+    compteur += 1
+
+    # On reconstruit le chemin de l'arrivée au départ en parcourant les prédecesseurs de proche en proche
+    while (noeud_courant != depart):
+        liste_pred = dag_travail[noeud_courant]
+        noeud_courant, c = c_Tire_alias(liste_pred)
+        compteur += c
+        chemin.append(noeud_courant)
+        compteur += 1
+
+    chemin.reverse()
+    compteur += len(chemin)
+    return (chemin, compteur)
+
+
+
+
+def c_Marche_Aleatoire_depart(preprocessing, depart):
+    """Prend en argument le preprocessing, ainsi qu'un noeud de départ. Renvoie un plus court chemin partant de départ uniformément """
+
+    table_departs_arrivees = preprocessing[1]
+    compteur = 0
+    arrivee, c = c_Tire_alias(table_departs_arrivees[depart])
+    compteur += c
+    chemin, c = c_Marche_Aleatoire_depart_arrivee(preprocessing,depart,arrivee)
+    compteur += c
+    return (chemin, compteur)
+
+
+
+def c_Marche_Aleatoire(preprocessing):
+    """Prend en argument le preprocessing. Renvoie un plus court chemin uniformément. """
+
+    table_departs = preprocessing[2]
+    compteur = 0
+    depart,c = c_Tire_alias(table_departs)
+    compteur += c
+    chemin, c = c_Marche_Aleatoire_depart(preprocessing,depart)
+    compteur += c
+    return (chemin,compteur)
+
+
+
 
 ## Algo poids v1
 
@@ -1655,20 +1841,24 @@ def c_Uniforme_ePCC_long_v1(preprocessing,l_min = 0,l_max = -1):
 ## Simulation
 
 
-def calcul_donnees(fonction_prep, fonction_gen, echantillon, nbRequetes = 10000):
+def calcul_donnees(fonction_prep, fonction_gen, echantillon, nbRequetes = 10000, gen_normalise = True, attente = False):
     """Compte les opérations élémentaires lors du preprocessing et des requetes pour tout les graphes de l'échantillon"""
     donnees_prep = []
     donnees_gen = []
     nb_noeuds = []
 
+    nb_attente = 1
     for G in echantillon:
+        if attente:
+            print("Graphe en cours : n°" + str(nb_attente))
+            nb_attente += 1
         prep,compteur_prep = fonction_prep(G)
 
         compteur_gen = 0
 
         for i in range(nbRequetes):
             pcc,c = fonction_gen(prep)
-            compteur_gen += c
+            compteur_gen += c/len(pcc) if gen_normalise else c
 
         donnees_prep.append(compteur_prep)
         donnees_gen.append(compteur_gen)
@@ -1883,8 +2073,6 @@ def complexite_graphe(donnees,preprocessing = True, generateur = True, logScale 
 
 
 def complexite_comparaison_donnees(liste_donnees, preprocessing = True, generateur = True,logScale = True):
-
-
     plt.clf()
     if logScale:
         plt.xscale("log") ; plt.yscale("log")
